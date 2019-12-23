@@ -1,0 +1,124 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="imgui">
+      <UniqueIdentifier>{1be46c72-0e7c-47ce-bce9-1a45af0dc6f1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="imgui\renderer">
+      <UniqueIdentifier>{1db24556-f1e7-44aa-9b01-49c6bc83dd7b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core">
+      <UniqueIdentifier>{da9f5e24-2ac9-433b-ad70-90f55d1d85fd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="game">
+      <UniqueIdentifier>{0bbe6d60-5db7-4e5c-a7f7-7e8212235323}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\util">
+      <UniqueIdentifier>{5e8eba35-ca08-451d-9f37-2436f25edb4f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\debug">
+      <UniqueIdentifier>{f97c3273-3ff7-4ca1-b8b7-32ded18b4749}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\math">
+      <UniqueIdentifier>{d97589ea-d2be-4539-a7a4-5bac1df2d5b0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\render">
+      <UniqueIdentifier>{51835010-5ae8-4be6-bfe3-4d64656458ae}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="imgui.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_demo.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_draw.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_widgets.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_opengl3.cpp">
+      <Filter>imgui\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="imgui_impl_sdl.cpp">
+      <Filter>imgui\renderer</Filter>
+    </ClCompile>
+    <ClCompile Include="camera.cpp">
+      <Filter>game</Filter>
+    </ClCompile>
+    <ClCompile Include="algebra.cpp">
+      <Filter>core\math</Filter>
+    </ClCompile>
+    <ClCompile Include="gl3w.c">
+      <Filter>core\render</Filter>
+    </ClCompile>
+    <ClCompile Include="box2dSdlDebugDraw.cpp">
+      <Filter>core\debug</Filter>
+    </ClCompile>
+    <ClCompile Include="path.cpp">
+      <Filter>core\util</Filter>
+    </ClCompile>
+    <ClCompile Include="perlin.cpp">
+      <Filter>core\util</Filter>
+    </ClCompile>
+    <ClCompile Include="renderer.cpp">
+      <Filter>core\render</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="color.cpp">
+      <Filter>core\util</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="imconfig.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_internal.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_rectpack.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_textedit.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="imstb_truetype.h">
+      <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_opengl3.h">
+      <Filter>imgui\renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="imgui_impl_sdl.h">
+      <Filter>imgui\renderer</Filter>
+    </ClInclude>
+    <ClInclude Include="perlin.h">
+      <Filter>core\util</Filter>
+    </ClInclude>
+    <ClInclude Include="path.h">
+      <Filter>core\util</Filter>
+    </ClInclude>
+    <ClInclude Include="types.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="box2dSdlDebugDraw.h">
+      <Filter>core\debug</Filter>
+    </ClInclude>
+    <ClInclude Include="camera.h">
+      <Filter>game</Filter>
+    </ClInclude>
+    <ClInclude Include="algebra.h">
+      <Filter>core\math</Filter>
+    </ClInclude>
+    <ClInclude Include="renderer.h">
+      <Filter>core\render</Filter>
+    </ClInclude>
+    <ClInclude Include="color.h">
+      <Filter>core\util</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
