@@ -13,9 +13,9 @@ namespace tdjx
     {
         bool init(SDL_Window* window);
         void shutdown();
-        void draw(float32 dt);
+        void draw();
 
-        void set_image_data(uint* data, int width, int height);
+        void set_texture_data(uint* data, int width, int height);
 
         const char* glslVersion();
         SDL_GLContext  glContext();

@@ -70,6 +70,9 @@
     <ClCompile Include="color.cpp">
       <Filter>core\util</Filter>
     </ClCompile>
+    <ClCompile Include="pico8.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imconfig.h">
@@ -119,6 +122,9 @@
     </ClInclude>
     <ClInclude Include="color.h">
       <Filter>core\util</Filter>
+    </ClInclude>
+    <ClInclude Include="pico8.h">
+      <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

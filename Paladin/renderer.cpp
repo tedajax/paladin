@@ -14,15 +14,12 @@ namespace tdjx
         uint g_emptyVao;
         uint g_texture;
         uint g_textureUniform;
-        uint g_timeUniform;
         SDL_Window* g_window;
 
-        float32 g_time;
-
-        void set_image_data(uint* data, int width, int height)
+        void set_texture_data(uint* data, int width, int height)
         {
             glBindTexture(GL_TEXTURE_2D, g_texture);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, data);
         }
 
         bool init(SDL_Window* window)
@@ -86,7 +83,6 @@ namespace tdjx
                 "#define PI 3.1415926538\n"
                 "in vec2 uv;\n"
                 "uniform sampler2D image;\n"
-                "uniform float time;\n"
                 "out vec3 color;\n"
                 "void main(){\n"
                 " color = texture(image, uv).rgb;\n"
@@ -147,7 +143,6 @@ namespace tdjx
             glUseProgram(g_programId);
 
             g_textureUniform = glGetUniformLocation(g_programId, "texture");
-            g_timeUniform = glGetUniformLocation(g_programId, "time");
 
             glEnable(GL_DEPTH_TEST);
             glDepthFunc(GL_LESS);
@@ -160,16 +155,11 @@ namespace tdjx
             SDL_GL_DeleteContext(g_gl);
         }
 
-        void draw(float32 dt)
+        void draw()
         {
-            g_time += dt;
-            g_time = g_time - static_cast<int>(g_time);
-
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             glUseProgram(g_programId);
-
-            glUniform1f(g_timeUniform, g_time);
 
             glBindTexture(GL_TEXTURE_2D, g_texture);
             glBindVertexArray(g_emptyVao);
