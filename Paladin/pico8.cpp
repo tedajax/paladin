@@ -6,6 +6,16 @@
 #include "pico8.h"
 #include "renderer.h"
 
+void print_fixed(const pico8::fixed16& f)
+{
+    printf("%0.5f\n", static_cast<float32>(f));
+}
+
+uint8* surface_pixel_addr(SDL_Surface* surface, int x, int y)
+{
+    ptrdiff_t bpp = static_cast<ptrdiff_t>(surface->format->BytesPerPixel);
+    return reinterpret_cast<uint8*>(surface->pixels) + static_cast<ptrdiff_t>(y)* static_cast<ptrdiff_t>(surface->pitch) + static_cast<ptrdiff_t>(x)* static_cast<ptrdiff_t>(bpp);
+}
 
 uint32 get_surface_pixel(SDL_Surface* surface, int x, int y)
 {
@@ -20,7 +30,7 @@ uint32 get_surface_pixel(SDL_Surface* surface, int x, int y)
     }
 
     int bpp = surface->format->BytesPerPixel;
-    uint8* pixel = reinterpret_cast<uint8*>(surface->pixels) + y * surface->pitch + x * bpp;
+    uint8* pixel = surface_pixel_addr(surface, x, y);
 
     switch (bpp)
     {
@@ -40,7 +50,7 @@ void set_surface_pixel(SDL_Surface* surface, int x, int y, uint32 color)
     }
 
     int bpp = surface->format->BytesPerPixel;
-    uint8* pixel = reinterpret_cast<uint8*>(surface->pixels) + y * surface->pitch + x * bpp;
+    uint8* pixel = surface_pixel_addr(surface, x, y);
 
     switch (bpp)
     {
@@ -58,13 +68,28 @@ void set_surface_pixel(SDL_Surface* surface, int x, int y, uint32 color)
 
 namespace pico8
 {
+    namespace literals
+    {
+        fixed16 operator"" _fx16(unsigned long long v)
+        {
+            return fixed16(static_cast<int>(v));
+        }
+
+        fixed16 operator"" _fx16(long double v)
+        {
+            return fixed16(static_cast<float32>(v));
+        }
+    }
+
+    using namespace literals;
+
     struct
     {
         SDL_Surface* screen = nullptr;
         uint32* pixels = nullptr;
         int width = 0;
         int height = 0;
-        float32 time = 0;
+        fixed16 time = 0;
     } g_pico8;
 
     const uint32 k_screenCoordMask = 0x7F;
@@ -92,13 +117,33 @@ namespace pico8
     static std::mt19937 rgen(rd());
     static std::uniform_real_distribution<float32> rdist(0.f, 1.f);
 
-    uint32 get_raw_color(uint8 picoColor)
+    struct rect { fixed16 x0, y0, x1, y1; };
+
+    const rect k_defaultClipRect = { 0, 0, 127, 127 };
+    static rect s_clipRect = k_defaultClipRect;
+
+    void clip_rect(rect& r)
     {
-        int index = (picoColor & 0xF);
+
+    }
+
+    void clip()
+    {
+        s_clipRect = k_defaultClipRect;
+    }
+
+    void clip(fixed16 x, fixed16 y, fixed16 w, fixed16 h)
+    {
+        s_clipRect = { x, y, x + w - 1_fx16, y + h - 1_fx16 };
+    }
+
+    uint32 get_raw_color(fixed16 picoColor)
+    {
+        int index = (static_cast<int>(picoColor) & 0xF);
         return k_rawColors[index];
     }
 
-    uint8 get_pico_color(uint32 rawColor)
+    fixed16 get_pico_color(uint32 rawColor)
     {
         for (int i = 0; i < 16; ++i)
         {
@@ -117,20 +162,22 @@ namespace pico8
     }
 
     // assumes all input is valid so it's faster
-    uint32* get_screen_addr(int x, int y)
+    uint32* get_pixel_addr(int x, int y)
     {
-        return g_pico8.pixels + y * g_pico8.width + x;
+        return g_pico8.pixels + static_cast<ptrdiff_t>(y) * static_cast<ptrdiff_t>(g_pico8.width) + static_cast<ptrdiff_t>(x);
     }
 
     uint32 get_screen_raw_pixel(int x, int y)
     {
-        return *get_screen_addr(x, y);
+        return *get_pixel_addr(x, y);
     }
 
     void set_screen_raw_pixel(int x, int y, uint32 rawColor)
     {
-        *get_screen_addr(x, y) = rawColor;
+        *get_pixel_addr(x, y) = rawColor;
     }
+
+    void srand(uint32 seed);
 
     void init()
     {
@@ -177,17 +224,22 @@ namespace pico8
         rgen.seed(seed);
     }
 
-    float32 rnd(float32 r)
+    void srand(fixed16 seed)
     {
-        return rdist(rgen) * r;
+        srand(seed.raw());
     }
 
-    uint8 pget(int x, int y)
+    fixed16 rnd(fixed16 r)
+    {
+        return static_cast<fixed16>(rdist(rgen)) * r;
+    }
+
+    fixed16 pget(int x, int y)
     {
         return get_pico_color(get_surface_pixel(g_pico8.screen, x, y));
     }
 
-    float32 time()
+    fixed16 time()
     {
         return g_pico8.time;
     }
@@ -197,20 +249,20 @@ namespace pico8
         SDL_FillRect(g_pico8.screen, nullptr, get_raw_color(c));
     }
 
-    void pset(int x, int y, uint8 c)
+    void pset(fixed16 x, fixed16 y, fixed16 c)
     {
-        set_screen_raw_pixel(x, y, get_raw_color(c));
+        set_screen_raw_pixel(static_cast<int>(x), static_cast<int>(y), get_raw_color(static_cast<int>(c)));
     }
 
-    void hline(int y, int left, int right, uint8 c)
+    void hline(int y, int left, int right, fixed16 c)
     {
-        uint32* leftAddr = get_screen_addr(left, y);
-        uint32* rightAddr = get_screen_addr(right, y) + 1;
+        uint32* leftAddr = get_pixel_addr(left, y);
+        uint32* rightAddr = get_pixel_addr(right, y) + 1;
 
         std::fill(leftAddr, rightAddr, get_raw_color(c));
     }
 
-    void vline(int x, int top, int bottom, uint8 c)
+    void vline(int x, int top, int bottom, fixed16 c)
     {
         uint32 color = get_raw_color(c);
         for (int y = top; y < bottom; ++y)
@@ -219,8 +271,19 @@ namespace pico8
         }
     }
 
-    void line(int x0, int y0, int x1, int y1, uint8 c)
+    void line(fixed16 x0fx, fixed16 y0fx, fixed16 x1fx, fixed16 y1fx, fixed16 c)
     {
+        float32 x0f = static_cast<float32>(x0fx);
+        float32 y0f = static_cast<float32>(y0fx);
+        float32 x1f = static_cast<float32>(x1fx);
+        float32 y1f = static_cast<float32>(y1fx);
+
+
+        int x0 = static_cast<int>(x0fx);
+        int y0 = static_cast<int>(y0fx);
+        int x1 = static_cast<int>(x1fx);
+        int y1 = static_cast<int>(y1fx);
+
         int dx = std::abs(x1 - x0);
         int dy = std::abs(y1 - y0);
 
@@ -252,7 +315,9 @@ namespace pico8
             if (e2 > -dx) { err -= dy; x0 += sx; }
             if (e2 < dy) { err += dx; y0 += sy; }
         }
+    
     }
+
 
     //void rect(int x, int y, int w, int h, uint8 c);
     //void rectfill(int x, int y, int w, int h, uint8 c);

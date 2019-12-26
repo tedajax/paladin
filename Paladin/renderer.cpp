@@ -81,7 +81,7 @@ namespace tdjx
             const char* fragmentShader =
                 "#version 410 core\n"
                 "#define PI 3.1415926538\n"
-                "in vec2 uv;\n"
+                "layout(location = 0) in vec2 uv;\n"
                 "uniform sampler2D image;\n"
                 "out vec3 color;\n"
                 "void main(){\n"

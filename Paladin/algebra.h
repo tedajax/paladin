@@ -3,6 +3,7 @@
 #include "types.h"
 #include <limits>
 #include <glm/vec3.hpp>
+#include <cmath>
 
 struct b2Vec2;
 
