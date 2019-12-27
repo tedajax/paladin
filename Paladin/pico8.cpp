@@ -52,6 +52,13 @@ namespace pico8
         int height = 0;
         fixed16 time = 0;
         byte memory[0x8000];
+        fixed16 sleepTimer = 0;
+        struct
+        {
+            pico8_callback initFn;
+            pico8_callback updateFn;
+            pico8_callback drawFn;
+        } callbacks;
     } g_pico8;
 
     const uint32 k_screenCoordMask = 0x7F;
@@ -203,8 +210,12 @@ namespace pico8
 
     void srand(uint32 seed);
 
-    void init()
+    void system_init(pico8_callback initFn, pico8_callback updateFn, pico8_callback drawFn)
     {
+        g_pico8.callbacks = {
+            initFn, updateFn, drawFn
+        };
+
         g_pico8.width = 128;
         g_pico8.height = 128;
         g_pico8.screen = SDL_CreateRGBSurface(0, g_pico8.width, g_pico8.height,
@@ -226,9 +237,14 @@ namespace pico8
         }
 
         srand(rgen.default_seed);
+
+        if (g_pico8.callbacks.initFn)
+        {
+            g_pico8.callbacks.initFn();
+        }
     }
 
-    void shutdown()
+    void system_shutdown()
     {
         SDL_FreeSurface(g_pico8.screen);
 
@@ -238,10 +254,40 @@ namespace pico8
         g_pico8.pixels = nullptr;
     }
 
-    void update(float32 time)
+    void system_update(float32 dt)
     {
-        g_pico8.time = static_cast<fixed16>(time);
-        //printf("time: %0.2f 0.4f\n", static_cast<float32>(g_pico8.time), dt);
+        if (g_pico8.sleepTimer > 0_fx16)
+        {
+            g_pico8.sleepTimer -= dt;
+            return;
+        }
+
+        g_pico8.time += static_cast<fixed16>(dt);
+
+        if (g_pico8.callbacks.updateFn)
+        {
+            g_pico8.callbacks.updateFn();
+        }
+    }
+
+    void system_draw()
+    {
+        if (g_pico8.sleepTimer > 0_fx16)
+        {
+            return;
+        }
+
+        if (g_pico8.callbacks.drawFn)
+        {
+            g_pico8.callbacks.drawFn();
+        }
+
+        flip();
+    }
+
+    void sleep(fixed16 seconds)
+    {
+        g_pico8.sleepTimer += seconds;
     }
 
     void flip()
@@ -304,7 +350,7 @@ namespace pico8
         _pset(x, y, pixel_mask(static_cast<int>(x)), static_cast<uint8>(c));
     }
 
-    void hline(int y, int left, int right, fixed16 c)
+    void _hline(int y, int left, int right, fixed16 c)
     {
         uint8* leftAddr = get_pixel_addr(left, y);
         uint8* rightAddr = get_pixel_addr(right, y);
@@ -326,7 +372,7 @@ namespace pico8
         std::fill(leftAddr, rightAddr + 1, cc);
     }
 
-    void vline(int x, int top, int bottom, fixed16 c)
+    void _vline(int x, int top, int bottom, fixed16 c)
     {
         uint32 color = static_cast<uint8>(c);
         uint8 mask = pixel_mask(x);
@@ -425,20 +471,44 @@ namespace pico8
         }
     }
 
-    void line(fixed16 x0fx, fixed16 y0fx, fixed16 x1fx, fixed16 y1fx, fixed16 c)
+    void hline(fixed16 yfx, fixed16 x0fx, fixed16 x1fx, fixed16 c)
     {
-        aarect r = make_aarect(x0fx, y0fx, x1fx, y1fx);
-        if (!clip_rect(r))
+        int x0 = static_cast<int>(x0fx);
+        int y0 = static_cast<int>(yfx);
+        int x1 = static_cast<int>(x1fx);
+        int y1 = static_cast<int>(yfx);
+
+        if (!clip_line(s_clipRect, x0, y0, x1, y1))
         {
             return;
         }
 
+        _hline(y0, x0, x1, c);
+    }
+
+    void vline(fixed16 xfx, fixed16 y0fx, fixed16 y1fx, fixed16 c)
+    {
+        int x0 = static_cast<int>(xfx);
+        int y0 = static_cast<int>(y0fx);
+        int x1 = static_cast<int>(xfx);
+        int y1 = static_cast<int>(y1fx);
+
+        if (!clip_line(s_clipRect, x0, y0, x1, y1))
+        {
+            return;
+        }
+
+        _vline(x0, y0, y1, c);
+    }
+
+    void line(fixed16 x0fx, fixed16 y0fx, fixed16 x1fx, fixed16 y1fx, fixed16 c)
+    {
         int x0 = static_cast<int>(x0fx);
         int y0 = static_cast<int>(y0fx);
         int x1 = static_cast<int>(x1fx);
         int y1 = static_cast<int>(y1fx);
 
-        if (!clip_line(r, x0, y0, x1, y1))
+        if (!clip_line(s_clipRect, x0, y0, x1, y1))
         {
             return;
         }
@@ -452,7 +522,7 @@ namespace pico8
             {
                 std::swap(x0, x1);
             }
-            hline(y0, x0, x1, c);
+            _hline(y0, x0, x1, c);
             return;
         }
         else if (dx == 0)
@@ -461,7 +531,7 @@ namespace pico8
             {
                 std::swap(y0, y1);
             }
-            vline(x0, y0, y1, c);
+            _vline(x0, y0, y1, c);
             return;
         }
 
@@ -511,7 +581,7 @@ namespace pico8
         {
             for (int yy = static_cast<int>(r.y0); yy < static_cast<int>(r.y1); ++yy)
             {
-                hline(yy, left, right, c);
+                _hline(yy, left, right, c);
             }
         }
     }
@@ -577,54 +647,37 @@ namespace pico8
             return;
         }
 
-        int cx = static_cast<int>(x);
-        int cy = static_cast<int>(y);
+        int x0 = static_cast<int>(x);
+        int y0 = static_cast<int>(y);
 
-        float32 cxf = static_cast<float32>(cx);
-        float32 cyf = static_cast<float32>(cy);
-
-        float32 r2 = static_cast<float32>(r) * static_cast<float32>(r);
-
-        fixed16 left = bounds.x0;
-        fixed16 right = bounds.x1;
-        fixed16 top = bounds.y0;
-        fixed16 bottom = bounds.y1;
-
-        for (fixed16 y = top; y < bottom; ++y)
+        auto scanline4 = [x0, y0](int dx, int dy, uint8 c)
         {
-            float32 yy = static_cast<float32>(y);
+            hline(y0 - dy, x0 - dx, x0 + dx, c);
+            hline(y0 - dx, x0 - dy, x0 + dy, c);
+            hline(y0 + dy, x0 - dx, x0 + dx, c);
+            hline(y0 + dx, x0 - dy, x0 + dy, c);
+        };
 
-            fixed16 l = left;
-            fixed16 r = right;
+        {
+            int x = static_cast<int>(r);
+            int y = 0;
+            int err = 0;
 
-            for (; l < x; ++l)
+            while (x >= y)
             {
-                float32 xx = static_cast<float32>(l);
-                
-                float32 dx = xx - cxf;
-                float32 dy = yy - cyf;
+                scanline4(x, y, c);
 
-                if (dx * dx + dy * dy <= r2)
+                if (err <= 0)
                 {
-                    break;
+                    ++y;
+                    err += 2 * y + 1;
                 }
-            }
-            for (; r > x; --r)
-            {
-                float32 xx = static_cast<float32>(r);
 
-                float32 dx = xx - cxf;
-                float32 dy = yy - cyf;
-
-                if (dx * dx + dy * dy <= r2)
+                if (err > 0)
                 {
-                    break;
+                    --x;
+                    err -= 2 * x + 1;
                 }
-            }
-
-            if (l != r)
-            {
-                line(l, y, r, y, c);
             }
         }
     }
@@ -633,4 +686,5 @@ namespace pico8
     //void rectfill(int x, int y, int w, int h, uint8 c);
     //void circ(int x, int y, int r, uint8 c);
     //void circfill(int x, int y, int r, uint8 c);
+
 }

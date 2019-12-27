@@ -1,5 +1,7 @@
 #pragma once
 
+#include <functional>
+
 #include "types.h"
 
 #ifdef _DEBUG
@@ -205,9 +207,6 @@ namespace pico8
         return lhs.m_value >= rhs.m_value;
     }
 
-    void init();
-    void shutdown();
-
     inline fixed16 min(fixed16 a, fixed16 b)
     {
         return (a.m_value < b.m_value) ? a : b;
@@ -268,7 +267,13 @@ namespace pico8
         return static_cast<fixed16>(std::atan2f(y, x));
     }
 
-    void update(float32 time);
+    typedef void (*pico8_callback)(void);
+
+    void system_init(pico8_callback initFn, pico8_callback updateFn, pico8_callback drawFn);
+    void system_shutdown();
+    void system_update(float32 dt);
+    void system_draw();
+    
     void flip();
     fixed16 time();
     void srand(fixed16 seed);
@@ -287,4 +292,8 @@ namespace pico8
     void rectfill(fixed16 x, fixed16 y, fixed16 w, fixed16 h, fixed16 c);
     void circ(fixed16 x, fixed16 y, fixed16 r, fixed16 c);
     void circfill(fixed16 x, fixed16 y, fixed16 r, fixed16 c);
+
+    void sleep(fixed16 seconds);
+
+    
 }

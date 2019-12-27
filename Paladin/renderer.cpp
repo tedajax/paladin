@@ -8,13 +8,12 @@ namespace tdjx
 {
     namespace render
     {
-
-        SDL_GLContext g_gl;
-        uint g_programId;
-        uint g_emptyVao;
-        uint g_texture;
-        uint g_textureUniform;
-        SDL_Window* g_window;
+        static SDL_GLContext g_gl;
+        static uint g_programId;
+        static uint g_emptyVao;
+        static uint g_texture;
+        static uint g_textureUniform;
+        static SDL_Window* g_window;
 
         void set_texture_data(uint* data, int width, int height)
         {
@@ -55,7 +54,7 @@ namespace tdjx
                 return false;
             }
 
-            glClearColor(0.15f, 0.15f, 0.15f, 1.0f);
+            glClearColor(0.9f, 0.0f, 0.9f, 1.0f);
 
             glGenVertexArrays(1, &g_emptyVao);
 
@@ -69,19 +68,18 @@ namespace tdjx
 
             const char* vertexShader =
                 "#version 410 core\n"
-                "layout(location = 0) out vec2 uv;\n"
+                "out vec2 uv;\n"
                 "void main()\n"
                 "{\n"
                 "    float x = float(((uint(gl_VertexID) + 2u) / 3u) % 2u);\n"
                 "    float y = float(((uint(gl_VertexID) + 1u) / 3u) % 2u);\n"
-                "    gl_Position = vec4(-1.0f + x * 2.0f, 1.0f - y * 2.0f, 0.0f, 1.0f);\n"
+                "    gl_Position = vec4(-1f + x * 2.0f, 1.0f - y * 2.0f, 0.0f, 1.0f);\n"
                 "    uv = vec2(x, y);\n"
                 "}";
 
             const char* fragmentShader =
                 "#version 410 core\n"
-                "#define PI 3.1415926538\n"
-                "layout(location = 0) in vec2 uv;\n"
+                "in vec2 uv;\n"
                 "uniform sampler2D image;\n"
                 "out vec3 color;\n"
                 "void main(){\n"
@@ -90,26 +88,6 @@ namespace tdjx
 
             GLuint vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
             GLuint fragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
-
-            auto compile_shader = [](uint shaderId) -> bool
-            {
-                glCompileShader(shaderId);
-
-                const size_t bufferLen = 2048;
-                char buffer[bufferLen];
-
-                int len = 0;
-
-                glGetShaderInfoLog(shaderId, bufferLen, &len, buffer);
-
-                if (len > 0)
-                {
-                    printf(buffer);
-                    return false;
-                }
-
-                return true;
-            };
 
             glShaderSource(vertexShaderId, 1, &vertexShader, nullptr);
             glCompileShader(vertexShaderId);
@@ -122,16 +100,19 @@ namespace tdjx
             glAttachShader(g_programId, fragmentShaderId);
             glLinkProgram(g_programId);
 
-            const size_t bufferLen = 2048;
-            char buffer[bufferLen];
-
-            int len = 0;
-
-            glGetProgramInfoLog(g_programId, bufferLen, &len, buffer);
-
-            if (len > 0)
             {
-                printf(buffer);
+                const size_t bufferLen = 2048;
+                char buffer[bufferLen];
+
+                int len = 0;
+
+                glGetProgramInfoLog(g_programId, bufferLen, &len, buffer);
+
+                if (len > 0)
+                {
+                    printf(" -- SHADER ERROR -- \n");
+                    printf(buffer);
+                }
             }
 
             glDetachShader(g_programId, vertexShaderId);

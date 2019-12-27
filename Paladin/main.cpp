@@ -27,7 +27,6 @@
 
 using Random = effolkronium::random_static;
 
-void game_init();
 void game_draw();
 
 int main(int argc, char* argv[]) {
@@ -66,7 +65,9 @@ int main(int argc, char* argv[]) {
     
    
     tdjx::render::init(window);
-    pico8::init();
+    pico8::system_init([]() {},
+        []() {},
+        game_draw);
 
     // ImGui initialization
     IMGUI_CHECKVERSION();
@@ -133,8 +134,8 @@ int main(int argc, char* argv[]) {
 
         // PICO-8 LOOP
         {
-            pico8::update(time);
-            game_draw();
+            pico8::system_update(dt);
+            pico8::system_draw();
         }
 
         // UI
@@ -173,7 +174,7 @@ int main(int argc, char* argv[]) {
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    pico8::shutdown();
+    pico8::system_shutdown();
 
     tdjx::render::shutdown();
 
@@ -181,11 +182,6 @@ int main(int argc, char* argv[]) {
     SDL_Quit();
 
     return 0;
-}
-
-void game_init()
-{
-
 }
 
 void game_draw()
@@ -218,8 +214,9 @@ void game_draw()
 
     pico8::line(16, -20, 12, 300, 2);
 
+    pico8::circ(10, 25, 0, 8);
+    pico8::circ(10, 35, 1, 9);
+    pico8::circ(10, 45, 2, 10);
     pico8::circ(70, 25, pico8::sin(pico8::time()) * 8_fx16 + 9_fx16, 7);
     pico8::circfill(90, 89, pico8::cos(pico8::time() * 0.125_fx16) * 24_fx16 + 25_fx16, 14);
-
-    pico8::flip();
 }
