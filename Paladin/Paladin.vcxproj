@@ -161,7 +161,6 @@
     <ClCompile Include="algebra.cpp" />
     <ClCompile Include="box2dSdlDebugDraw.cpp" />
     <ClCompile Include="camera.cpp" />
-    <ClCompile Include="color.cpp" />
     <ClCompile Include="gl3w.c" />
     <ClCompile Include="imgui.cpp" />
     <ClCompile Include="imgui_demo.cpp" />
@@ -179,7 +178,6 @@
     <ClInclude Include="algebra.h" />
     <ClInclude Include="box2dSdlDebugDraw.h" />
     <ClInclude Include="camera.h" />
-    <ClInclude Include="color.h" />
     <ClInclude Include="imconfig.h" />
     <ClInclude Include="imgui.h" />
     <ClInclude Include="imgui_impl_opengl3.h" />

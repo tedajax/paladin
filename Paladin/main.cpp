@@ -13,7 +13,6 @@
 #include <effolkronium/random.hpp>
 
 #include "algebra.h"
-#include "color.h"
 #include "renderer.h"
 
 #include "imgui.h"

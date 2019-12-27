@@ -67,9 +67,6 @@
       <Filter>core\render</Filter>
     </ClCompile>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="color.cpp">
-      <Filter>core\util</Filter>
-    </ClCompile>
     <ClCompile Include="pico8.cpp">
       <Filter>core</Filter>
     </ClCompile>
@@ -119,9 +116,6 @@
     </ClInclude>
     <ClInclude Include="renderer.h">
       <Filter>core\render</Filter>
-    </ClInclude>
-    <ClInclude Include="color.h">
-      <Filter>core\util</Filter>
     </ClInclude>
     <ClInclude Include="pico8.h">
       <Filter>core</Filter>
