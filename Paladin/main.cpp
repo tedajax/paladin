@@ -2,6 +2,7 @@
 #include <random>
 #include <iostream>
 #include <cstdlib>
+#include <cinttypes>
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
@@ -27,7 +28,6 @@
 using Random = effolkronium::random_static;
 
 void game_init();
-void game_update(float32 dt);
 void game_draw();
 
 int main(int argc, char* argv[]) {
@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
     int fps = 0;
     uint64 ticks = SDL_GetPerformanceCounter();
     uint64 lastTicks = ticks;
-    uint64 frameTicks = 0;
+    uint64 frame_ns = 0;
 
     int framesInSecond = 0;
     float32 dt = 0.f;
@@ -107,22 +107,25 @@ int main(int argc, char* argv[]) {
         }
 
         // TIME
+        uint64 frequency = SDL_GetPerformanceFrequency();
+        uint64 delta_ns = 0;
         {
-            ticks = SDL_GetPerformanceCounter();
-            uint64 frequency = SDL_GetPerformanceFrequency();
-
-            uint64 diff = ticks - lastTicks;
-            diff *= (1000000000 / frequency);
+            const uint64 k_nano = 1'000'000'000;
 
             lastTicks = ticks;
+            ticks = SDL_GetPerformanceCounter();
 
-            dt = (float32)diff / 1000000000.f;
+            uint64 diff = ticks - lastTicks;
+
+            delta_ns = diff * k_nano / frequency;
+
+            dt = static_cast<float32>(static_cast<float64>(delta_ns) / static_cast<float64>(k_nano));
             time += dt;
 
             ++framesInSecond;
-            frameTicks += diff;
-            if (frameTicks >= 1000000000) {
-                frameTicks -= 1000000000;
+            frame_ns += delta_ns;
+            if (frame_ns >= k_nano) {
+                frame_ns -= k_nano;
                 fps = framesInSecond;
                 framesInSecond = 0;
             }
@@ -130,8 +133,7 @@ int main(int argc, char* argv[]) {
 
         // PICO-8 LOOP
         {
-            pico8::update(dt);
-            game_update(dt);
+            pico8::update(time);
             game_draw();
         }
 
@@ -144,6 +146,11 @@ int main(int argc, char* argv[]) {
             ImGui::Begin("Debug");
 
             ImGui::Text("FPS: %d", fps);
+
+            ImGui::Text("Time: %f", time);
+            ImGui::Text("Delta NS: %" PRIu64, delta_ns);
+            ImGui::Text("Delta: %f", dt);
+
 
             ImGui::End();
         }
@@ -181,31 +188,37 @@ void game_init()
 
 }
 
-void game_update(float32 dt)
-{
-    pico8::update(dt);
-}
-
 void game_draw()
 {
     using namespace pico8;
 
     pico8::cls(0);
 
-    pico8::srand(1);
-    for (int i = 0; i < 128; ++i)
-    {
-        int x = pico8::rnd(128);
-        int y = pico8::rnd(128);
-        pico8::pset(x, y, std::floor(pico8::rnd(7)) + 8);
-    }
+    //pico8::srand(1);
+    //for (int i = 0; i < 128; ++i)
+    //{
+    //    int x = pico8::rnd(128);
+    //    int y = pico8::rnd(128);
+    //    //pico8::pset(x, y, std::floor(pico8::rnd(7)) + 8);
+    //}
 
-    //printf("sin: %0.4f \n", static_cast<float32>(pico8::sin(pico8::time())));
+    ////printf("sin: %0.4f \n", static_cast<float32>(pico8::sin(pico8::time())));
 
-   // fixed16 xx = pico8::cos(pico8::time()) * 32_fx16 + 64_fx16;
-    //fixed16 yy = pico8::sin(pico8::time()) * 32_fx16 + 64_fx16;
-    
-//    pico8::line(64_fx16, 64_fx16, xx, yy, 8_fx16);
+    //fixed16 xx = pico8::cos(pico8::time() * 0.125_fx16) * 32_fx16 + 64_fx16;
+    //fixed16 yy = pico8::sin(pico8::time() * 0.125_fx16) * 32_fx16 + 64_fx16;
+    //
+    //pico8::line(64_fx16, 64_fx16, xx, yy, 8_fx16);
+
+    //pico8::line(0_fx16, 0_fx16, 2_fx16, 0_fx16, 11);
+    //pico8::line(0_fx16, 1_fx16, 3_fx16, 1_fx16, 10);
+    //pico8::line(1_fx16, 2_fx16, 2_fx16, 2_fx16, 9);
+    //pico8::line(1_fx16, 3_fx16, 3_fx16, 3_fx16, 8);
+
+    //pico8::rect(50_fx16, 10_fx16, 40_fx16, 30_fx16, 12);
+
+    //pico8::rectfill(20_fx16, 40_fx16, 8_fx16, 56_fx16, 3);
+
+    pico8::line(11, -20, 12, 300, 2);
 
     pico8::flip();
 }
