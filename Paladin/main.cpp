@@ -194,31 +194,32 @@ void game_draw()
 
     pico8::cls(0);
 
-    //pico8::srand(1);
-    //for (int i = 0; i < 128; ++i)
-    //{
-    //    int x = pico8::rnd(128);
-    //    int y = pico8::rnd(128);
-    //    //pico8::pset(x, y, std::floor(pico8::rnd(7)) + 8);
-    //}
+    pico8::srand(1);
+    for (int i = 0; i < 128; ++i)
+    {
+        int x = pico8::rnd(128);
+        int y = pico8::rnd(128);
+        //pico8::pset(x, y, std::floor(pico8::rnd(7)) + 8);
+    }
 
-    ////printf("sin: %0.4f \n", static_cast<float32>(pico8::sin(pico8::time())));
 
-    //fixed16 xx = pico8::cos(pico8::time() * 0.125_fx16) * 32_fx16 + 64_fx16;
-    //fixed16 yy = pico8::sin(pico8::time() * 0.125_fx16) * 32_fx16 + 64_fx16;
-    //
-    //pico8::line(64_fx16, 64_fx16, xx, yy, 8_fx16);
+    fixed16 xx = pico8::cos(pico8::time() * 0.125_fx16) * 32_fx16 + 64_fx16;
+    fixed16 yy = pico8::sin(pico8::time() * 0.125_fx16) * 32_fx16 + 64_fx16;
+    pico8::line(64_fx16, 64_fx16, xx, yy, 8_fx16);
 
-    //pico8::line(0_fx16, 0_fx16, 2_fx16, 0_fx16, 11);
-    //pico8::line(0_fx16, 1_fx16, 3_fx16, 1_fx16, 10);
-    //pico8::line(1_fx16, 2_fx16, 2_fx16, 2_fx16, 9);
-    //pico8::line(1_fx16, 3_fx16, 3_fx16, 3_fx16, 8);
+    pico8::line(0_fx16, 0_fx16, 2_fx16, 0_fx16, 11);
+    pico8::line(0_fx16, 1_fx16, 3_fx16, 1_fx16, 10);
+    pico8::line(1_fx16, 2_fx16, 2_fx16, 2_fx16, 9);
+    pico8::line(1_fx16, 3_fx16, 3_fx16, 3_fx16, 8);
 
-    //pico8::rect(50_fx16, 10_fx16, 40_fx16, 30_fx16, 12);
+    pico8::rect(50_fx16, 10_fx16, 40_fx16, 30_fx16, 12);
 
-    //pico8::rectfill(20_fx16, 40_fx16, 8_fx16, 56_fx16, 3);
+    pico8::rectfill(20_fx16, 40_fx16, 8_fx16, 56_fx16, 3);
 
-    pico8::line(11, -20, 12, 300, 2);
+    pico8::line(16, -20, 12, 300, 2);
+
+    pico8::circ(70, 25, pico8::sin(pico8::time()) * 8_fx16 + 9_fx16, 7);
+    pico8::circfill(90, 89, pico8::cos(pico8::time() * 0.125_fx16) * 24_fx16 + 25_fx16, 14);
 
     pico8::flip();
 }

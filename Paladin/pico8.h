@@ -91,6 +91,18 @@ namespace pico8
             return *this;
         }
 
+        inline fixed16& operator++()
+        {
+            *this += 1;
+            return *this;
+        }
+
+        inline fixed16& operator--()
+        {
+            *this -= 1;
+            return *this;
+        }
+
         inline float32 wholef() const
         {
             return std::floor(static_cast<float32>(*this));

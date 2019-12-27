@@ -92,7 +92,7 @@ namespace pico8
 
     constexpr inline uint8 pixel_mask(int x)
     {
-        return ((x & 1) != 0) ? k_maskLeft : k_maskRight;
+        return ((x & 1) == 0) ? k_maskLeft : k_maskRight;
     }
 
     aarect make_aarect(const fixed16& x0, const fixed16& y0, const fixed16& x1, const fixed16& y1)
@@ -108,6 +108,14 @@ namespace pico8
             a.x1 >= b.x0 &&
             a.y0 <= b.y1 &&
             a.y1 >= b.y0;
+    }
+
+    bool clip_point(int x, int y)
+    {
+        return x >= static_cast<int>(s_clipRect.x0) &&
+            x <= static_cast<int>(s_clipRect.x1) &&
+            y >= static_cast<int>(s_clipRect.y0) &&
+            y <= static_cast<int>(s_clipRect.y1);
     }
 
     bool clip_rect(const aarect& source, aarect& dest)
@@ -190,7 +198,7 @@ namespace pico8
     {
         picoColor |= (picoColor << 4);
         uint8* data = get_pixel_addr(x, y);
-        *data = (*data & ~mask) | (picoColor | mask);
+        *data = (*data & ~mask) | (picoColor & mask);
     }
 
     void srand(uint32 seed);
@@ -293,7 +301,7 @@ namespace pico8
 
     void pset(fixed16 x, fixed16 y, fixed16 c)
     {
-        _pset(x, y, pixel_mask(static_cast<int>(x)), c);
+        _pset(x, y, pixel_mask(static_cast<int>(x)), static_cast<uint8>(c));
     }
 
     void hline(int y, int left, int right, fixed16 c)
@@ -303,12 +311,12 @@ namespace pico8
         
         if ((left & 1) != 0)
         {
-            _pset(left, y, pixel_mask(left), c);
+            _pset(left, y, k_maskRight, c);
             leftAddr += 1;
         }
         if ((right & 1) == 0)
         {
-            _pset(right, y, pixel_mask(right), c);
+            _pset(right, y, k_maskLeft, c);
             rightAddr -= 1;
         }
 
@@ -516,15 +524,109 @@ namespace pico8
             return;
         }
 
-        auto plot8 = [x, y]()
-        {
+        int x0 = static_cast<int>(x);
+        int y0 = static_cast<int>(y);
 
+        auto putpixel = [](int x, int y, uint8 c) {
+            if (clip_point(x, y)) {
+                _pset(x, y, pixel_mask(x), c);
+            }
         };
+
+        auto plot8 = [x0, y0, putpixel](int dx, int dy, uint8 c)
+        {
+            putpixel(x0 + dx, y0 + dy, c);
+            putpixel(x0 + dy, y0 + dx, c);
+            putpixel(x0 + dx, y0 - dy, c);
+            putpixel(x0 + dy, y0 - dx, c);
+            putpixel(x0 - dx, y0 + dy, c);
+            putpixel(x0 - dy, y0 + dx, c);
+            putpixel(x0 - dx, y0 - dy, c);
+            putpixel(x0 - dy, y0 - dx, c);
+        };
+
+        {
+            int x = static_cast<int>(r);
+            int y = 0;
+            int err = 0;
+
+            while (x >= y)
+            {
+                plot8(x, y, c);
+
+                if (err <= 0)
+                {
+                    ++y;
+                    err += 2 * y + 1;
+                }
+
+                if (err > 0)
+                {
+                    --x;
+                    err -= 2 * x + 1;
+                }
+            }
+        }
     }
 
     void circfill(fixed16 x, fixed16 y, fixed16 r, fixed16 c)
     {
+        aarect bounds = make_aarect(x - r, y - r, x + r, y + r);
+        if (!clip_rect(bounds))
+        {
+            return;
+        }
 
+        int cx = static_cast<int>(x);
+        int cy = static_cast<int>(y);
+
+        float32 cxf = static_cast<float32>(cx);
+        float32 cyf = static_cast<float32>(cy);
+
+        float32 r2 = static_cast<float32>(r) * static_cast<float32>(r);
+
+        fixed16 left = bounds.x0;
+        fixed16 right = bounds.x1;
+        fixed16 top = bounds.y0;
+        fixed16 bottom = bounds.y1;
+
+        for (fixed16 y = top; y < bottom; ++y)
+        {
+            float32 yy = static_cast<float32>(y);
+
+            fixed16 l = left;
+            fixed16 r = right;
+
+            for (; l < x; ++l)
+            {
+                float32 xx = static_cast<float32>(l);
+                
+                float32 dx = xx - cxf;
+                float32 dy = yy - cyf;
+
+                if (dx * dx + dy * dy <= r2)
+                {
+                    break;
+                }
+            }
+            for (; r > x; --r)
+            {
+                float32 xx = static_cast<float32>(r);
+
+                float32 dx = xx - cxf;
+                float32 dy = yy - cyf;
+
+                if (dx * dx + dy * dy <= r2)
+                {
+                    break;
+                }
+            }
+
+            if (l != r)
+            {
+                line(l, y, r, y, c);
+            }
+        }
     }
 
     //void rect(int x, int y, int w, int h, uint8 c);
