@@ -285,6 +285,18 @@ namespace pico8
         flip();
     }
 
+    fixed16 peek(fixed16 addr)
+    {
+        int offset = static_cast<int>(addr);
+        return static_cast<fixed16>(g_pico8.memory[offset]);
+    }
+
+    void poke(fixed16 addr, fixed16 value)
+    {
+        int offset = static_cast<int>(addr);
+        g_pico8.memory[offset] = static_cast<uint8>(value);
+    }
+
     void sleep(fixed16 seconds)
     {
         g_pico8.sleepTimer += seconds;
@@ -299,7 +311,7 @@ namespace pico8
             for (uint64 x = 0; x < 64; ++x)
             {
                 byte pixel = g_pico8.memory[k_offsetScreenData + y * 64ull + x];
-                
+
                 uint8 left = pixel & 0xF;
                 uint8 right = pixel >> 4;
 
@@ -327,7 +339,7 @@ namespace pico8
 
     fixed16 rnd(fixed16 r)
     {
-        return static_cast<fixed16>(rdist(rgen)) * r;
+        return static_cast<fixed16>(rdist(rgen))* r;
     }
 
     fixed16 pget(fixed16 x, fixed16 y)
@@ -354,7 +366,7 @@ namespace pico8
     {
         uint8* leftAddr = get_pixel_addr(left, y);
         uint8* rightAddr = get_pixel_addr(right, y);
-        
+
         if ((left & 1) != 0)
         {
             _pset(left, y, k_maskRight, c);
@@ -461,7 +473,7 @@ namespace pico8
             }
         }
 
-        _is_visible:
+    _is_visible:
         {
             x0 = a.x;
             y0 = a.y;
@@ -515,7 +527,7 @@ namespace pico8
 
         int dx = std::abs(x1 - x0);
         int dy = std::abs(y1 - y0);
-        
+
         if (dy == 0)
         {
             if (x1 < x0)
@@ -552,7 +564,7 @@ namespace pico8
     void rect(fixed16 x, fixed16 y, fixed16 w, fixed16 h, fixed16 c)
     {
         aarect r = { x, y, x + w - 1_fx16, y + h - 1_fx16 };
-        
+
         if (!clip_rect(r))
         {
             return;
@@ -568,7 +580,7 @@ namespace pico8
     void rectfill(fixed16 x, fixed16 y, fixed16 w, fixed16 h, fixed16 c)
     {
         aarect r = { x, y, x + w - 1_fx16, y + h - 1_fx16 };
-        
+
         if (!clip_rect(r))
         {
             return;
@@ -681,10 +693,4 @@ namespace pico8
             }
         }
     }
-
-    //void rect(int x, int y, int w, int h, uint8 c);
-    //void rectfill(int x, int y, int w, int h, uint8 c);
-    //void circ(int x, int y, int r, uint8 c);
-    //void circfill(int x, int y, int r, uint8 c);
-
 }

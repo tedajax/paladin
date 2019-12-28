@@ -273,6 +273,9 @@ namespace pico8
     void system_shutdown();
     void system_update(float32 dt);
     void system_draw();
+
+    fixed16 peek(fixed16 addr);
+    void poke(fixed16 addr, fixed16 value);
     
     void flip();
     fixed16 time();

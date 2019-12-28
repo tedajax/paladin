@@ -30,28 +30,6 @@ void game_draw();
 
 int main(int argc, char* argv[]) {
     using namespace pico8::literals;
-
-    const int k_testCount = 10;
-    const pico8::fixed16 tests[k_testCount] = {
-        1_fx16,
-        -1_fx16,
-        0_fx16,
-        1.0_fx16,
-        -1.0_fx16,
-        0.0_fx16,
-        1.5_fx16,
-        -3.2_fx16,
-        32767_fx16,
-        -32767.5_fx16
-    };
-
-    int index = 0;
-    std::for_each(std::begin(tests), std::end(tests),
-        [&index](const pico8::fixed16& v)
-        {
-            printf("%d : %d %0.4f\n", index, static_cast<int>(v), static_cast<float32>(v));
-            ++index;
-        });
     
     Random::seed(1);
 
@@ -187,35 +165,47 @@ void game_draw()
 {
     using namespace pico8;
 
-    pico8::cls(0);
+    cls(0);
 
     pico8::srand(1);
-    for (int i = 0; i < 128; ++i)
+
+    for (int i = 0; i < 16; ++i)
     {
-        int x = pico8::rnd(128);
-        int y = pico8::rnd(128);
-        //pico8::pset(x, y, std::floor(pico8::rnd(7)) + 8);
+        int x = i % 4 * 16;
+        int y = (i / 4) * 16;
+        rectfill(x, y, 16, 16, i);
     }
 
+    for (int i = 0; i < 128; ++i)
+    {
+        int x = rnd(128);
+        int y = rnd(128);
+        pset(x, y, static_cast<int>(rnd(7)) + 8);
+    }
 
-    fixed16 xx = pico8::cos(pico8::time() * 0.125_fx16) * 32_fx16 + 64_fx16;
-    fixed16 yy = pico8::sin(pico8::time() * 0.125_fx16) * 32_fx16 + 64_fx16;
-    pico8::line(64_fx16, 64_fx16, xx, yy, 8_fx16);
+    fixed16 xx = cos(time() * 0.125_fx16) * 32_fx16 + 64_fx16;
+    fixed16 yy = sin(time() * 0.125_fx16) * 32_fx16 + 64_fx16;
+    line(64_fx16, 64_fx16, xx, yy, 8_fx16);
 
-    pico8::line(0_fx16, 0_fx16, 2_fx16, 0_fx16, 11);
-    pico8::line(0_fx16, 1_fx16, 3_fx16, 1_fx16, 10);
-    pico8::line(1_fx16, 2_fx16, 2_fx16, 2_fx16, 9);
-    pico8::line(1_fx16, 3_fx16, 3_fx16, 3_fx16, 8);
+    line(0_fx16, 0_fx16, 2_fx16, 0_fx16, 11);
+    line(0_fx16, 1_fx16, 3_fx16, 1_fx16, 10);
+    line(1_fx16, 2_fx16, 2_fx16, 2_fx16, 9);
+    line(1_fx16, 3_fx16, 3_fx16, 3_fx16, 8);
 
-    pico8::rect(50_fx16, 10_fx16, 40_fx16, 30_fx16, 12);
+    rect(50_fx16, 10_fx16, 40_fx16, 30_fx16, 12);
 
-    pico8::rectfill(20_fx16, 40_fx16, 8_fx16, 56_fx16, 3);
+    rectfill(20_fx16, 40_fx16, 8_fx16, 56_fx16, 3);
 
-    pico8::line(16, -20, 12, 300, 2);
+    line(16, -20, 12, 300, 2);
 
-    pico8::circ(10, 25, 0, 8);
-    pico8::circ(10, 35, 1, 9);
-    pico8::circ(10, 45, 2, 10);
-    pico8::circ(70, 25, pico8::sin(pico8::time()) * 8_fx16 + 9_fx16, 7);
-    pico8::circfill(90, 89, pico8::cos(pico8::time() * 0.125_fx16) * 24_fx16 + 25_fx16, 14);
+    circ(10, 25, 0, 8);
+    circ(10, 35, 1, 9);
+    circ(10, 45, 2, 10);
+    circ(70, 25, sin(time()) * 8_fx16 + 9_fx16, 7);
+    circfill(90, 89, cos(time() * 0.125_fx16) * 24_fx16 + 25_fx16, 14);
+
+    for (int i = 0; i < 100; ++i)
+    {
+        poke(0x6000 + static_cast<int>(rnd(0x2000)), 0x55);
+    }
 }
