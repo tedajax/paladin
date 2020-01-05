@@ -22,6 +22,8 @@
 #include "pico8.h"
 #include "tdjx_gfx.h"
 
+#include "util.h"
+
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
@@ -57,19 +59,31 @@ int main(int argc, char* argv[])
         ImGui_ImplOpenGL3_Init(tdjx::render::glslVersion());
 
         // Setup palette
+        uint32 paletteSize = 0;
         {
             int w, h, bpp;
-            uint8* data = stbi_load("assets/palettes/win16_16.png", &w, &h, &bpp, 4);
+            uint8* data = stbi_load("assets/palettes/rosy42.png", &w, &h, &bpp, 4);
+
+            uint32 size = w * h;
+            paletteSize = tdjx::util::next_pow2(size);
+
+            uint8* paddedData = new uint8[paletteSize * 4];
+
+            std::memset(paddedData, 0, paletteSize * 4);
+            std::memcpy(paddedData, data, w * h * 4);
 
             if (data != nullptr)
             {
-                tdjx::render::set_palette(data, w);
+                tdjx::render::set_palette(paddedData, paletteSize);
             }
 
+            //delete paddedData;
             stbi_image_free(data);
         }
 
         ImGui::StyleColorsDark();
+
+        return paletteSize;
     };
 
     auto render_shutdown = []()
@@ -79,9 +93,8 @@ int main(int argc, char* argv[])
         tdjx::render::shutdown();
     };
 
-    render_init();
-
-    tdjx::gfx::init(320, 240, 16);
+    int colors = render_init();
+    tdjx::gfx::init(320, 240, 64);
 
     int fps = 0;
     uint64 ticks = SDL_GetPerformanceCounter();
@@ -207,7 +220,7 @@ int main(int argc, char* argv[])
             int x = i % 8 * 40 + 20;
             int y = i / 8 * 30 + 15;
             int r = 20;
-            tdjx::gfx::circle_fill(x, y, r + std::sin(tt + i / 10.f * M_PI * 2.f) * (r * 0.5f), i % 16);
+            tdjx::gfx::circle_fill(x, y, r + std::sin(tt + i / 10.f * M_PI * 2.f) * (r * 0.5f), i % 42);
         }
 
         for (int i = 0; i < 32; ++i)

@@ -7,6 +7,8 @@
 
 #include <stb/stb_image.h>
 
+#include "util.h"
+
 namespace tdjx
 {
     namespace gfx
@@ -55,7 +57,7 @@ namespace tdjx
             g_gfx.clipArea = { 0, 0, g_gfx.width - 1, g_gfx.height - 1 };
             g_gfx.size = g_gfx.width * g_gfx.height;
             g_gfx.paletteSize = colors;
-            g_gfx.paletteMask = (1 << colors) - 1;
+            g_gfx.paletteMask = colors - 1;
             g_gfx.paletteScalar = 256 / g_gfx.paletteSize;
 
             g_gfx.pixels = new uint8[g_gfx.size];

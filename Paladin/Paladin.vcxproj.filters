@@ -73,6 +73,9 @@
     <ClCompile Include="tdjx_gfx.cpp">
       <Filter>core</Filter>
     </ClCompile>
+    <ClCompile Include="util.cpp">
+      <Filter>core\util</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imconfig.h">
@@ -125,6 +128,9 @@
     </ClInclude>
     <ClInclude Include="tdjx_gfx.h">
       <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="util.h">
+      <Filter>core\util</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
