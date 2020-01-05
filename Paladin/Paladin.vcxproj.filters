@@ -13,9 +13,6 @@
     <Filter Include="game">
       <UniqueIdentifier>{0bbe6d60-5db7-4e5c-a7f7-7e8212235323}</UniqueIdentifier>
     </Filter>
-    <Filter Include="core\util">
-      <UniqueIdentifier>{5e8eba35-ca08-451d-9f37-2436f25edb4f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="core\debug">
       <UniqueIdentifier>{f97c3273-3ff7-4ca1-b8b7-32ded18b4749}</UniqueIdentifier>
     </Filter>
@@ -24,6 +21,9 @@
     </Filter>
     <Filter Include="core\render">
       <UniqueIdentifier>{51835010-5ae8-4be6-bfe3-4d64656458ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="core\util">
+      <UniqueIdentifier>{5e8eba35-ca08-451d-9f37-2436f25edb4f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -68,6 +68,9 @@
     </ClCompile>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="pico8.cpp">
+      <Filter>core</Filter>
+    </ClCompile>
+    <ClCompile Include="tdjx_gfx.cpp">
       <Filter>core</Filter>
     </ClCompile>
   </ItemGroup>
@@ -118,6 +121,9 @@
       <Filter>core\render</Filter>
     </ClInclude>
     <ClInclude Include="pico8.h">
+      <Filter>core</Filter>
+    </ClInclude>
+    <ClInclude Include="tdjx_gfx.h">
       <Filter>core</Filter>
     </ClInclude>
   </ItemGroup>

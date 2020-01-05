@@ -3,27 +3,67 @@
 #include <GL/gl3w.h>
 #include <SDL2/SDL.h>
 #include <cstdio>
+#include <fstream>
+#include <sstream>
 
 namespace tdjx
 {
     namespace render
     {
-        static SDL_GLContext g_gl;
-        static uint g_programId;
-        static uint g_emptyVao;
-        static uint g_texture;
-        static uint g_textureUniform;
-        static SDL_Window* g_window;
+        enum class Textures
+        {
+            kIntensity,
+            kPalette,
+            kCount
+        };
+
+        const int kTextureCount = static_cast<int>(Textures::kCount);
+        
+        static struct
+        {
+            uint textures[kTextureCount];
+            SDL_GLContext gl;
+            int width;
+            int height;
+            uint emptyVao;
+            Material material;
+            SDL_Window* window;
+            Mode renderMode;
+        } r;
+        
+        uint get_texture(Textures tex)
+        {
+            return r.textures[static_cast<int>(tex)];
+        }
 
         void set_texture_data(uint* data, int width, int height)
         {
-            glBindTexture(GL_TEXTURE_2D, g_texture);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, data);
+            /*bind_texture(Textures::kBasic);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, data);*/
         }
 
-        bool init(SDL_Window* window)
+        void set_palette(uint8* data, int size)
         {
-            g_window = window;
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, get_texture(Textures::kPalette));
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            glActiveTexture(GL_TEXTURE0);
+        }
+
+        void set_intensity(uint8* data)
+        {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, get_texture(Textures::kIntensity));
+            glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r.width, r.height, GL_RED, GL_UNSIGNED_BYTE, data);
+            glBindTexture(GL_TEXTURE_2D, 0);
+        }
+
+        bool init(SDL_Window* window, int bufferWidth, int bufferHeight)
+        {
+            r.window = window;
+            r.width = bufferWidth;
+            r.height = bufferHeight;
 
             SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
             SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -37,7 +77,7 @@ namespace tdjx
             SDL_DisplayMode current;
             SDL_GetCurrentDisplayMode(0, &current);
 
-            g_gl = SDL_GL_CreateContext(g_window);
+            r.gl = SDL_GL_CreateContext(r.window);
 
             // vsync
             SDL_GL_SetSwapInterval(1);
@@ -56,100 +96,193 @@ namespace tdjx
 
             glClearColor(0.9f, 0.0f, 0.9f, 1.0f);
 
-            glGenVertexArrays(1, &g_emptyVao);
-
-            glGenTextures(1, &g_texture);
-            glBindTexture(GL_TEXTURE_2D, g_texture);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glGenerateMipmap(GL_TEXTURE_2D);
-
-            const char* vertexShader =
-                "#version 410 core\n"
-                "out vec2 uv;\n"
-                "void main()\n"
-                "{\n"
-                "    float x = float(((uint(gl_VertexID) + 2u) / 3u) % 2u);\n"
-                "    float y = float(((uint(gl_VertexID) + 1u) / 3u) % 2u);\n"
-                "    gl_Position = vec4(-1f + x * 2.0f, 1.0f - y * 2.0f, 0.0f, 1.0f);\n"
-                "    uv = vec2(x, y);\n"
-                "}";
-
-            const char* fragmentShader =
-                "#version 410 core\n"
-                "in vec2 uv;\n"
-                "uniform sampler2D image;\n"
-                "out vec3 color;\n"
-                "void main(){\n"
-                " color = texture(image, uv).rgb;\n"
-                "}";
-
-            GLuint vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
-            GLuint fragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
-
-            glShaderSource(vertexShaderId, 1, &vertexShader, nullptr);
-            glCompileShader(vertexShaderId);
-
-            glShaderSource(fragmentShaderId, 1, &fragmentShader, nullptr);
-            glCompileShader(fragmentShaderId);
-
-            g_programId = glCreateProgram();
-            glAttachShader(g_programId, vertexShaderId);
-            glAttachShader(g_programId, fragmentShaderId);
-            glLinkProgram(g_programId);
-
+            glGenVertexArrays(1, &r.emptyVao);
+            
+            glGenTextures(kTextureCount, r.textures);
+            for (int i = 0; i < kTextureCount; ++i)
             {
-                const size_t bufferLen = 2048;
-                char buffer[bufferLen];
+                glBindTexture(GL_TEXTURE_2D, r.textures[i]);
 
-                int len = 0;
-
-                glGetProgramInfoLog(g_programId, bufferLen, &len, buffer);
-
-                if (len > 0)
-                {
-                    printf(" -- SHADER ERROR -- \n");
-                    printf(buffer);
-                }
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                glGenerateMipmap(GL_TEXTURE_2D);
             }
 
-            glDetachShader(g_programId, vertexShaderId);
-            glDetachShader(g_programId, fragmentShaderId);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, get_texture(Textures::kIntensity));
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, r.width, r.height, 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
+            glBindTexture(GL_TEXTURE_2D, 0);
+            
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, get_texture(Textures::kPalette));
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 16, 1, 0, GL_BGRA, GL_UNSIGNED_BYTE, nullptr);
+            glBindTexture(GL_TEXTURE_2D, 0);
 
-            glDeleteShader(vertexShaderId);
-            glDeleteShader(fragmentShaderId);
+            glActiveTexture(GL_TEXTURE0);
 
-            glUseProgram(g_programId);
+            r.material = material::create("assets/shaders/screen_quad.vert",
+                "assets/shaders/screen_quad_indexed.frag",
+                { "intensity", "palette", "mode", "bufferWindowRatio" });
 
-            g_textureUniform = glGetUniformLocation(g_programId, "texture");
-
-            glEnable(GL_DEPTH_TEST);
-            glDepthFunc(GL_LESS);
+            on_resize();
 
             return true;
         }
 
         void shutdown()
         {
-            SDL_GL_DeleteContext(g_gl);
+            SDL_GL_DeleteContext(r.gl);
+        }
+
+        void on_resize()
+        {
+            glUseProgram(r.material.programId);
+
+            int windowWidth, windowHeight;
+            SDL_GetWindowSize(r.window, &windowWidth, &windowHeight);
+
+            float32 bufferAspect = static_cast<float32>(r.width) / r.height;
+            float32 windowAspect = static_cast<float32>(windowWidth) / windowHeight;
+
+            float32 offset = bufferAspect / windowAspect;
+
+            glUniform1f(r.material.uniforms["bufferWindowRatio"], offset);
+        }
+
+        const char* kModeNames[static_cast<int>(Mode::kCount)] = {
+            "Normal",
+            "Intensity",
+            "Palette"
+        };
+
+        const char* get_mode_name()
+        {
+            return kModeNames[static_cast<int>(r.renderMode)];
+        }
+
+        void set_mode(Mode mode)
+        {
+            r.renderMode = mode;
+            glUniform1i(r.material.uniforms["mode"], static_cast<int>(r.renderMode));
+        }
+
+        void next_mode()
+        {
+            int modeId = (static_cast<int>(r.renderMode) + 1) % static_cast<int>(Mode::kCount);
+            set_mode(static_cast<Mode>(modeId));
+        }
+
+        void prev_mode()
+        {
+            int modeId = static_cast<int>(r.renderMode) - 1;
+            if (modeId < 0)
+            {
+                modeId += static_cast<int>(Mode::kCount);
+            }
+            set_mode(static_cast<Mode>(modeId));
         }
 
         void draw()
         {
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            glClear(GL_COLOR_BUFFER_BIT);
 
-            glUseProgram(g_programId);
+            glUseProgram(r.material.programId);
 
-            glBindTexture(GL_TEXTURE_2D, g_texture);
-            glBindVertexArray(g_emptyVao);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, get_texture(Textures::kIntensity));
+            glUniform1i(r.material.uniforms["intensity"], 0);
+
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, get_texture(Textures::kPalette));
+            glUniform1i(r.material.uniforms["palette"], 1);
+
+            glActiveTexture(GL_TEXTURE0);
+
+            glBindVertexArray(r.emptyVao);
             glDrawArrays(GL_TRIANGLES, 0, 6);
             glBindVertexArray(GL_NONE);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, 0);
+
+            glActiveTexture(GL_TEXTURE1);
+            glBindTexture(GL_TEXTURE_2D, 0);
         }
 
         const char* glslVersion() { return "#version 410 core"; }
-        SDL_GLContext  glContext() { return g_gl; }
+        SDL_GLContext  glContext() { return r.gl; }
+
+        namespace material
+        {
+            Material create(const char* vertFilename, const char* fragFilename, std::vector<const char*> uniforms)
+            {
+                auto loadShader = [](const char* filename, uint shaderId)
+                {
+                    // Load file contents and set shader source
+                    {
+                        std::ifstream file(filename);
+                        std::stringstream buffer;
+                        buffer << file.rdbuf();
+                        std::string strBuffer = buffer.str();
+
+                        const char* cbuffer = strBuffer.c_str();
+
+                        glShaderSource(shaderId, 1, &cbuffer, nullptr);
+                    }
+
+                    glCompileShader(shaderId);
+                };
+
+                uint vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
+                uint fragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
+
+                loadShader("assets/shaders/screen_quad.vert", vertexShaderId);
+                loadShader("assets/shaders/screen_quad_indexed.frag", fragmentShaderId);
+
+                uint programId = glCreateProgram();
+                glAttachShader(programId, vertexShaderId);
+                glAttachShader(programId, fragmentShaderId);
+                glLinkProgram(programId);
+
+                {
+                    const size_t bufferLen = 2048;
+                    char buffer[bufferLen];
+
+                    int len = 0;
+
+                    glGetProgramInfoLog(programId, bufferLen, &len, buffer);
+
+                    if (len > 0)
+                    {
+                        printf(" -- SHADER ERROR -- \n");
+                        printf(buffer);
+                    }
+                }
+
+                glDetachShader(programId, vertexShaderId);
+                glDetachShader(programId, fragmentShaderId);
+
+                glDeleteShader(vertexShaderId);
+                glDeleteShader(fragmentShaderId);
+
+                Material result;
+                result.programId = programId;
+
+                for (const char* uniformName : uniforms)
+                {
+                    int location = glGetUniformLocation(programId, uniformName);
+                    if (location < 0)
+                    {
+                        printf("Unable to find uniform location for \'%s\'\n", uniformName);
+                    }
+                    result.uniforms.insert_or_assign(std::string(uniformName), location);
+                }
+
+                return result;
+            }
+        }
     }
 }
 

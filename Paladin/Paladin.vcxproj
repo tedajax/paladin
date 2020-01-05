@@ -173,6 +173,7 @@
     <ClCompile Include="perlin.cpp" />
     <ClCompile Include="pico8.cpp" />
     <ClCompile Include="renderer.cpp" />
+    <ClCompile Include="tdjx_gfx.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="algebra.h" />
@@ -190,6 +191,7 @@
     <ClInclude Include="perlin.h" />
     <ClInclude Include="pico8.h" />
     <ClInclude Include="renderer.h" />
+    <ClInclude Include="tdjx_gfx.h" />
     <ClInclude Include="types.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

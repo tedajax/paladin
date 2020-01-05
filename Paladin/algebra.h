@@ -12,7 +12,7 @@ public:
     vec2() : x(0), y(0) { }
     vec2(const vec2& other) : x(other.x), y(other.y) {}
     vec2(const b2Vec2& b2vec);
-    vec2(vec2&& other) : x(other.x), y(other.y) {}
+    vec2(vec2&& other) noexcept : x(other.x), y(other.y) {}
     vec2(float32 x, float32 y) : x(x), y(y) { }
     vec2(int x, int y) : x((float32)x), y((float32)y) { }
 
@@ -25,7 +25,7 @@ public:
         return *this;
     }
 
-    inline vec2 operator=(vec2&& other) {
+    inline vec2 operator=(vec2&& other) noexcept {
         x = other.x;
         y = other.y;
         return *this;
@@ -514,4 +514,5 @@ struct aabb {
         return aabb{ center - half, center + half };
     }
 };
+
 
