@@ -10,70 +10,65 @@ uint64_t tdjx::util::next_pow2(uint64_t value)
     return (value == 1) ? 1 : 1 << (64 - clzl(value));
 }
 
+#ifdef _WIN32
 #include <intrin.h>
-namespace tdjx
+inline uint32_t tdjx::util::ctz(uint32_t value)
 {
-    namespace util
+    unsigned long tz = 0;
+
+    if (_BitScanForward(&tz, value))
     {
-        uint32_t ctz(uint32_t value)
-        {
-            unsigned long trailing_zero = 0;
-
-            if (_BitScanForward(&trailing_zero, value))
-            {
-                return trailing_zero;
-            }
-            else
-            {
-                // This is undefined, I better choose 32 than 0
-                return 32;
-            }
-        }
-
-        uint32_t clz(uint32_t value)
-        {
-            unsigned long leading_zero = 0;
-
-            if (_BitScanReverse(&leading_zero, value))
-            {
-                return 31 - leading_zero;
-            }
-            else
-            {
-                // Same remarks as above
-                return 32;
-            }
-        }
-
-        uint64_t ctzl(uint64_t value)
-        {
-            unsigned long trailing_zero = 0;
-
-            if (_BitScanForward64(&trailing_zero, value))
-            {
-                return trailing_zero;
-            }
-            else
-            {
-                // This is undefined, I better choose 64 than 0
-                return 64;
-            }
-        }
-
-        uint64_t clzl(uint64_t value)
-        {
-            unsigned long leading_zero = 0;
-
-            if (_BitScanReverse64(&leading_zero, value))
-            {
-                return 63 - leading_zero;
-            }
-            else
-            {
-                // Same remarks as above
-                return 64;
-            }
-        }
+        return tz;
+    }
+    else
+    {
+        // Undefined, but this produces less ambiguous output than 0.
+        return 32;
     }
 }
 
+inline uint32_t tdjx::util::clz(uint32_t value)
+{
+    unsigned long lz = 0;
+
+    if (_BitScanReverse(&lz, value))
+    {
+        return 31 - lz;
+    }
+    else
+    {
+        // Undefined, but this produces less ambiguous output than 0.
+        return 32;
+    }
+}
+
+inline uint64_t tdjx::util::ctzl(uint64_t value)
+{
+    unsigned long tz = 0;
+
+    if (_BitScanForward64(&tz, value))
+    {
+        return tz;
+    }
+    else
+    {
+        // Undefined, but this produces less ambiguous output than 0.
+        return 64;
+    }
+}
+
+inline uint64_t tdjx::util::clzl(uint64_t value)
+{
+    unsigned long lz = 0;
+
+    if (_BitScanReverse64(&lz, value))
+    {
+        return 63 - lz;
+    }
+    else
+    {
+        // Undefined, but this produces less ambiguous output than 0.
+        return 64;
+    }
+}
+#endif

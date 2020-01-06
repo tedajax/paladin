@@ -31,8 +31,10 @@ namespace tdjx
         void next_mode();
 
         void set_texture_data(uint* data, int width, int height);
-        void set_palette(uint8* data, int size);
-        void set_intensity(uint8* data);
+        void set_palette(const uint8* data, int size);
+        void set_intensity(const uint8* data);
+
+        void reload_shaders();
 
         const char* glslVersion();
         SDL_GLContext  glContext();
@@ -40,12 +42,15 @@ namespace tdjx
         struct Material
         {
             uint programId;
+            const char* vertexFilename;
+            const char* fragmentFilename;
             std::unordered_map<std::string, int> uniforms;
         };
 
         namespace material
         {
-            Material create(const char* vertFilename, const char* fragFilename, std::vector<const char*> uniforms);
+            Material create(const char* vertFilename, const char* fragFilename, std::vector<std::string> uniforms);
+            void destroy(Material& self);
         }
     }
 }

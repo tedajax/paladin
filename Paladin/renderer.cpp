@@ -42,7 +42,7 @@ namespace tdjx
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, data);*/
         }
 
-        void set_palette(uint8* data, int size)
+        void set_palette(const uint8* data, int size)
         {
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, get_texture(Textures::kPalette));
@@ -51,7 +51,7 @@ namespace tdjx
             glActiveTexture(GL_TEXTURE0);
         }
 
-        void set_intensity(uint8* data)
+        void set_intensity(const uint8* data)
         {
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, get_texture(Textures::kIntensity));
@@ -149,6 +149,8 @@ namespace tdjx
             float32 offset = bufferAspect / windowAspect;
 
             glUniform1f(r.material.uniforms["bufferWindowRatio"], offset);
+
+            glUseProgram(0);
         }
 
         const char* kModeNames[static_cast<int>(Mode::kCount)] = {
@@ -165,7 +167,9 @@ namespace tdjx
         void set_mode(Mode mode)
         {
             r.renderMode = mode;
+            glUseProgram(r.material.programId);
             glUniform1i(r.material.uniforms["mode"], static_cast<int>(r.renderMode));
+            glUseProgram(0);
         }
 
         void next_mode()
@@ -209,6 +213,25 @@ namespace tdjx
 
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, 0);
+
+            glUseProgram(0);
+        }
+
+        void reload_shaders()
+        {
+            const char* vert = r.material.vertexFilename;
+            const char* frag = r.material.fragmentFilename;
+
+            std::vector<std::string> uniforms;
+            uniforms.reserve(r.material.uniforms.size());
+            for (auto kvp : r.material.uniforms)
+            {
+                uniforms.push_back(kvp.first);
+            }
+
+            material::destroy(r.material);
+
+            r.material = material::create(vert, frag, uniforms);
         }
 
         const char* glslVersion() { return "#version 410 core"; }
@@ -216,7 +239,7 @@ namespace tdjx
 
         namespace material
         {
-            Material create(const char* vertFilename, const char* fragFilename, std::vector<const char*> uniforms)
+            Material create(const char* vertFilename, const char* fragFilename, std::vector<std::string> uniforms)
             {
                 auto loadShader = [](const char* filename, uint shaderId)
                 {
@@ -238,8 +261,8 @@ namespace tdjx
                 uint vertexShaderId = glCreateShader(GL_VERTEX_SHADER);
                 uint fragmentShaderId = glCreateShader(GL_FRAGMENT_SHADER);
 
-                loadShader("assets/shaders/screen_quad.vert", vertexShaderId);
-                loadShader("assets/shaders/screen_quad_indexed.frag", fragmentShaderId);
+                loadShader(vertFilename, vertexShaderId);
+                loadShader(fragFilename, fragmentShaderId);
 
                 uint programId = glCreateProgram();
                 glAttachShader(programId, vertexShaderId);
@@ -269,18 +292,26 @@ namespace tdjx
 
                 Material result;
                 result.programId = programId;
+                result.vertexFilename = vertFilename;
+                result.fragmentFilename = fragFilename;
 
-                for (const char* uniformName : uniforms)
+                for (auto uniformName : uniforms)
                 {
-                    int location = glGetUniformLocation(programId, uniformName);
+                    int location = glGetUniformLocation(programId, uniformName.c_str());
                     if (location < 0)
                     {
-                        printf("Unable to find uniform location for \'%s\'\n", uniformName);
+                        printf("Unable to find uniform location for \'%s\'\n", uniformName.c_str());
                     }
-                    result.uniforms.insert_or_assign(std::string(uniformName), location);
+                    result.uniforms.insert_or_assign(uniformName, location);
                 }
 
                 return result;
+            }
+
+            void destroy(Material& self)
+            {
+                glDeleteProgram(self.programId);
+                self.programId = 0;
             }
         }
     }

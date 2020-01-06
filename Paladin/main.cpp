@@ -1,5 +1,7 @@
 #include <vector>
 #include <random>
+#include <functional>
+#include <algorithm>
 #include <iostream>
 #include <cstdlib>
 #include <cinttypes>
@@ -19,7 +21,6 @@
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_opengl3.h"
 
-#include "pico8.h"
 #include "tdjx_gfx.h"
 
 #include "util.h"
@@ -27,16 +28,13 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb/stb_image.h>
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb/stb_image_write.h>
+
 using Random = effolkronium::random_static;
-
-void game_draw();
-
-int g_stressNum = 10000;
 
 int main(int argc, char* argv[])
 {
-    using namespace pico8::literals;
-
     Random::seed(1);
 
     SDL_Init(SDL_INIT_VIDEO);
@@ -46,55 +44,22 @@ int main(int argc, char* argv[])
 
     SDL_Window* window = SDL_CreateWindow("Paladin", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, kWindowWidth, kWindowHeight, SDL_WINDOW_OPENGL);
 
+    //{
+    //    int w, h, n;
+    //    uint8* data = stbi_load("assets/sheet_00.png", &w, &h, &n, 4);
+    //    printf("w: %d, h: %d, n: %d\n", w, h, n);
+    //}
+
+    tdjx::gfx::init_with_window(320, 240, window);
+    auto image = tdjx::gfx::load_image("assets/shooter.png");
+
     // ImGui initialization
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-
-    auto render_init = [window]()
-    {
-        tdjx::render::init(window, 320, 240);
-
-        ImGui_ImplSDL2_InitForOpenGL(window, tdjx::render::glContext());
-        ImGui_ImplOpenGL3_Init(tdjx::render::glslVersion());
-
-        // Setup palette
-        uint32 paletteSize = 0;
-        {
-            int w, h, bpp;
-            uint8* data = stbi_load("assets/palettes/rosy42.png", &w, &h, &bpp, 4);
-
-            uint32 size = w * h;
-            paletteSize = tdjx::util::next_pow2(size);
-
-            uint8* paddedData = new uint8[paletteSize * 4];
-
-            std::memset(paddedData, 0, paletteSize * 4);
-            std::memcpy(paddedData, data, w * h * 4);
-
-            if (data != nullptr)
-            {
-                tdjx::render::set_palette(paddedData, paletteSize);
-            }
-
-            //delete paddedData;
-            stbi_image_free(data);
-        }
-
-        ImGui::StyleColorsDark();
-
-        return paletteSize;
-    };
-
-    auto render_shutdown = []()
-    {
-        ImGui_ImplOpenGL3_Shutdown();
-        ImGui_ImplSDL2_Shutdown();
-        tdjx::render::shutdown();
-    };
-
-    int colors = render_init();
-    tdjx::gfx::init(320, 240, 64);
+    ImGui::StyleColorsDark();
+    ImGui_ImplSDL2_InitForOpenGL(window, tdjx::render::glContext());
+    ImGui_ImplOpenGL3_Init(tdjx::render::glslVersion());
 
     int fps = 0;
     uint64 ticks = SDL_GetPerformanceCounter();
@@ -126,8 +91,7 @@ int main(int argc, char* argv[])
         if (shouldReloadShaders)
         {
             shouldReloadShaders = false;
-            render_shutdown();
-            render_init();
+            tdjx::render::reload_shaders();
         }
 
         SDL_Event event;
@@ -210,26 +174,35 @@ int main(int argc, char* argv[])
             ImGui::End();
         }
 
-        tdjx::gfx::clear(static_cast<int>(time) % 16);
+        tdjx::gfx::clear(0);
 
-        float32 tt = time * 8;
+        tdjx::gfx::blit(image, 50, 50);
+        //float32 tt = time * 8;
 
-        srand(1);
-        for (int i = 0; i < 64; ++i)
-        {
-            int x = i % 8 * 40 + 20;
-            int y = i / 8 * 30 + 15;
-            int r = 20;
-            tdjx::gfx::circle_fill(x, y, r + std::sin(tt + i / 10.f * M_PI * 2.f) * (r * 0.5f), i % 42);
-        }
 
-        for (int i = 0; i < 32; ++i)
-        {
-            int x = rand() % 320;
-            int y = rand() % 240;
-            tdjx::gfx::rectangle(x, y, x + 15, y + 15, 8 + i % 7);
-        }
+        //for (int i = 0; i < 256; ++i)
+        //{
+        //    int x = i % 16 * 20;
+        //    int y = i / 16 * 15;
+        //    tdjx::gfx::rectangle_fill(x, y, x + 19, y + 14, i);
+        //}
 
+        //srand(1);
+        //for (int i = 0; i < 64; ++i)
+        //{
+        //    int x = i % 8 * 40 + 20;
+        //    int y = i / 8 * 30 + 15;
+        //    int r = 20;
+        //    tdjx::gfx::circle_fill(x, y, r + std::sin(tt + i / 10.f * M_PI * 2.f) * (r * 0.5f), i);
+        //}
+
+        //for (int i = 0; i < 32; ++i)
+        //{
+        //    int x = rand() % 320;
+        //    int y = rand() % 240;
+        //    tdjx::gfx::rectangle(x, y, x + 15, y + 15, 8 + i % 7);
+        //}
+        
         tdjx::render::set_intensity(tdjx::gfx::get_pixels());
 
         // RENDER
@@ -245,76 +218,14 @@ int main(int argc, char* argv[])
         }
     }
 
-    tdjx::gfx::shutdown();
-
-    render_shutdown();
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
+
+    tdjx::gfx::shutdown();
 
     SDL_DestroyWindow(window);
     SDL_Quit();
 
     return 0;
-}
-
-void game_draw()
-{
-    using namespace pico8;
-
-    cls(0);
-    if (false)
-    {
-        pico8::srand(1);
-
-        for (int i = 0; i < 16; ++i)
-        {
-            int x = i % 4 * 16;
-            int y = (i / 4) * 16;
-            rectfill(x, y, 16, 16, i);
-        }
-
-        for (int i = 0; i < 128; ++i)
-        {
-            int x = rnd(128);
-            int y = rnd(128);
-            pset(x, y, static_cast<int>(rnd(7)) + 8);
-        }
-
-        fixed16 xx = cos(time() * 0.125_fx16) * 32_fx16 + 64_fx16;
-        fixed16 yy = sin(time() * 0.125_fx16) * 32_fx16 + 64_fx16;
-        line(64_fx16, 64_fx16, xx, yy, 8_fx16);
-
-        line(0_fx16, 0_fx16, 2_fx16, 0_fx16, 11);
-        line(0_fx16, 1_fx16, 3_fx16, 1_fx16, 10);
-        line(1_fx16, 2_fx16, 2_fx16, 2_fx16, 9);
-        line(1_fx16, 3_fx16, 3_fx16, 3_fx16, 8);
-
-        rect(50_fx16, 10_fx16, 40_fx16, 30_fx16, 12);
-
-        rectfill(20_fx16, 40_fx16, 8_fx16, 56_fx16, 3);
-
-        line(16, -20, 12, 300, 2);
-
-        circ(10, 25, 0, 8);
-        circ(10, 35, 1, 9);
-        circ(10, 45, 2, 10);
-        circ(70, 25, sin(time()) * 8_fx16 + 9_fx16, 7);
-        circfill(90, 89, cos(time() * 0.125_fx16) * 24_fx16 + 25_fx16, 14);
-
-        for (int i = 0; i < 100; ++i)
-        {
-            poke(0x6000 + static_cast<int>(rnd(0x2000)), 0x55);
-        }
-    }
-    else
-    {
-        for (int i = 0; i < g_stressNum; ++i)
-        {
-            int l = 8_fx16 + rnd(7);
-            int r = 8_fx16 + rnd(7);
-
-            poke(0x6000 + static_cast<int>(rnd(0x2000)), (l << 4) + r);
-
-            //pset(rnd(128), rnd(128), 8_fx16 + rnd(7));
-        }
-    }
 }

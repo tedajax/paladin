@@ -6,13 +6,51 @@
 #include <algorithm>
 
 #include <stb/stb_image.h>
+#include <stb/stb_image_write.h>
 
 #include "util.h"
+#include "renderer.h"
 
 namespace tdjx
 {
     namespace gfx
     {
+        struct image_loader
+        {
+            int w, h, bpp;
+            uint8* data;
+
+            image_loader(const char* filename, int channels)
+            {
+                data = stbi_load(filename, &w, &h, &bpp, channels);
+                bpp = channels;
+            }
+
+            ~image_loader()
+            {
+                stbi_image_free(data);
+                w = 0; h = 0; bpp = 0;
+            }
+
+            inline bool success() const { return data != nullptr; }
+        };
+
+        void fixup_palette_image(const char* sourceFilename, const char* destFilename)
+        {
+            int w, h, n;
+            uint8* data = stbi_load(sourceFilename, &w, &h, &n, 4);
+
+            if (data)
+            {
+                stbi_write_png(destFilename, w * h, 1, 4, data, w * h * 4);
+            }
+
+            stbi_image_free(data);
+        }
+
+        // lol
+        const int kMaxLoadedImages = 32;
+
         struct
         {
             uint8* pixels = nullptr;
@@ -20,9 +58,9 @@ namespace tdjx
             int height = 0;
             int size = 0;
             Rect clipArea = Rect{ 0, 0, 0, 0 };
-            int paletteSize = 0;
-            int paletteMask = 0;
-            int paletteScalar = 1;
+            Palette palette;
+            ByteImage imageBank[kMaxLoadedImages];
+            int nextImageId = 0;
         } g_gfx;
 
         uint8* pixel_xy(int x, int y)
@@ -50,27 +88,60 @@ namespace tdjx
             std::fill(pixel_xy(x0, y), pixel_xy(x1, y) + 1, color);
         }
 
-        void init(int width, int height, int colors)
+        void init_with_window(int width, int height, SDL_Window* window)
         {
+            tdjx::render::init(window, width, height);
+
             g_gfx.width = width;
             g_gfx.height = height;
             g_gfx.clipArea = { 0, 0, g_gfx.width - 1, g_gfx.height - 1 };
             g_gfx.size = g_gfx.width * g_gfx.height;
-            g_gfx.paletteSize = colors;
-            g_gfx.paletteMask = colors - 1;
-            g_gfx.paletteScalar = 256 / g_gfx.paletteSize;
-
+            
             g_gfx.pixels = new uint8[g_gfx.size];
+            
+            const char* palleteFile = "assets/palettes/arne32.png";
+            if (palette::try_create_palette_from_file(palleteFile, g_gfx.palette))
+            {
+                tdjx::render::set_palette(palette::data(g_gfx.palette), g_gfx.palette.size);
+            }
+            else
+            {
+                printf("Failed to create palette from '%s'.\n", palleteFile);
+            }
         }
 
         void shutdown()
         {
+            tdjx::render::shutdown();
             delete g_gfx.pixels;
+        }
+
+        ImageHandle load_image(const char* filename)
+        {
+            // todo: free list thing so spots can open up instead of being sequential
+
+            image_loader loader(filename, 4);
+            if (loader.success())
+            {
+                ByteImage& image = g_gfx.imageBank[g_gfx.nextImageId];
+                if (byte_image::try_create_from_image_with_palette(loader.data, loader.w, loader.h, loader.bpp, g_gfx.palette, image))
+                {
+                    ImageHandle ret = g_gfx.nextImageId;
+                    g_gfx.nextImageId++;
+                    return ret;
+                }
+            }
+            return kInvalidHandle;
+        }
+
+        void free_image(ImageHandle imageHandle)
+        {
+            // one day
         }
 
         void mask_color(int& color)
         {
-            color = (color & g_gfx.paletteMask) * g_gfx.paletteScalar;
+            color = (color & g_gfx.palette.mask) * g_gfx.palette.scalar;
         }
 
         void clear(int color)
@@ -87,7 +158,7 @@ namespace tdjx
         {
             if (rect::contains_point(g_gfx.clipArea, x, y))
             {
-                color &= g_gfx.paletteMask;
+                mask_color(color);
                 *pixel_xy(x, y) = color;
             }
         }
@@ -268,6 +339,26 @@ namespace tdjx
             rectangle_fill(Rect{ x0, y0, x1, y1 }, color);
         }
 
+        void blit(ImageHandle imageHandle, int x0, int y0)
+        {
+            const ByteImage image = g_gfx.imageBank[imageHandle];
+
+            Rect r = { x0, y0, x0 + image.width - 1, y0 + image.height - 1 };
+            if (!rect::clip_rect(g_gfx.clipArea, r))
+            {
+                return;
+            }
+
+            for (int y = 0; y < image.height; ++y)
+            {
+                for (int x = 0; x < image.width; ++x)
+                {
+                    uint8 i = image.data[y * image.width + x];
+                    *pixel_xy(x + x0, y + y0) = i;
+                }
+            }
+        }
+
         void* get_context()
         {
             return &g_gfx;
@@ -405,6 +496,114 @@ namespace tdjx
                     y1 = b.y;
                     return true;
                 }
+            }
+        }
+
+        namespace palette
+        {
+            bool try_create_palette_from_file(const char* filename, Palette& out)
+            {
+                out.data.clear();
+                out.colorIndexMap.clear();
+
+                const int channels = 4;
+
+                // Setup palette
+                image_loader loader(filename, channels);
+
+                if (loader.success())
+                {
+                    uint32 pixelCount = loader.w * loader.h;
+                    uint32 paletteSize = tdjx::util::next_or_equal_pow2(pixelCount);
+
+                    out.size = static_cast<int>(paletteSize);
+                    out.mask = out.size - 1;
+                    out.scalar = 256 / out.size;
+
+                    int paletteBytes = paletteSize * channels;
+
+                    out.data.resize(paletteBytes);
+                    std::memcpy(out.data.data(), loader.data, paletteBytes);
+
+                    for (int i = 0; i < paletteBytes; i += channels)
+                    {
+                        uint8* color = out.data.data() + i;
+                        int h = (static_cast<uint32>(color[0]) << 16) + (static_cast<uint32>(color[1]) << 8) + static_cast<uint32>(color[2]);
+                        out.colorIndexMap.insert_or_assign(h, i / channels);
+                    }
+
+                    return true;
+                }
+
+                return false;
+            }
+
+            inline const uint8* data(const Palette& self)
+            {
+                return self.data.data();
+            }
+
+            int index_from_color(const Palette& self, uint8 r, uint8 g, uint8 b)
+            {
+                int h = (static_cast<uint32>(r) << 16) + (static_cast<uint32>(g) << 8) + static_cast<uint32>(b);
+                auto search = self.colorIndexMap.find(h);
+                if (search != self.colorIndexMap.end())
+                {
+                    return search->second;
+                }
+                return -1;
+            }
+        }
+
+        namespace byte_image
+        {
+            bool try_create_from_image_with_palette(uint8* data, int width, int height, int bpp, const Palette& palette, ByteImage& out)
+            {
+                out.data.clear();
+
+                out.width = width;
+                out.height = height;
+
+                int size = width * height;
+
+                out.data.resize(size);
+
+                for (int i = 0; i < size; ++i)
+                {
+                    uint8* pixel = &data[i * bpp];
+
+                    uint8 v = 0;
+                    switch (bpp)
+                    {
+                        // 1 or 2 channel images have an intensity and optional alpha so it's pretty easy to 
+                    case 1: 
+                    case 2:
+                        v = *pixel; break;
+                        if (v >= palette.size)
+                        {
+                            return false;
+                        }
+                    case 3:
+                    case 4:
+                    {
+                        uint8 r = *pixel, g = pixel[1], b = pixel[2];
+                        int intensity = palette::index_from_color(palette, r, g, b);
+                        if (intensity >= 0)
+                        {
+                            v = static_cast<uint8>(intensity);
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                    break;
+                    default: break;
+                    }
+                    out.data[i] = v * palette.scalar;
+                }
+
+                return true;
             }
         }
     }
