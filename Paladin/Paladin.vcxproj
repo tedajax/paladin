@@ -193,6 +193,7 @@
     <ClInclude Include="pico8.h" />
     <ClInclude Include="renderer.h" />
     <ClInclude Include="tdjx_gfx.h" />
+    <ClInclude Include="tdjx_math.h" />
     <ClInclude Include="types.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>

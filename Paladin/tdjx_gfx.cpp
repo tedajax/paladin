@@ -88,6 +88,20 @@ namespace tdjx
             std::fill(pixel_xy(x0, y), pixel_xy(x1, y) + 1, color);
         }
 
+        void scanline_safe(int y, int x0, int x1, int color)
+        {
+            if (x1 < x0)
+            {
+                std::swap(x0, x1);
+            }
+            int y0 = y, y1 = y;
+            if (!rect::clip_line(g_gfx.clipArea, x0, y0, x1, y1))
+            {
+                return;
+            }
+            scanline(y0, x0, x1, color);
+        }
+
         void init_with_window(int width, int height, SDL_Window* window)
         {
             tdjx::render::init(window, width, height);
@@ -96,9 +110,9 @@ namespace tdjx
             g_gfx.height = height;
             g_gfx.clipArea = { 0, 0, g_gfx.width - 1, g_gfx.height - 1 };
             g_gfx.size = g_gfx.width * g_gfx.height;
-            
+
             g_gfx.pixels = new uint8[g_gfx.size];
-            
+
             const char* palleteFile = "assets/palettes/arne32.png";
             if (palette::try_create_palette_from_file(palleteFile, g_gfx.palette))
             {
@@ -186,6 +200,11 @@ namespace tdjx
             }
             else if (dx == 0)
             {
+                if (y1 < y0)
+                {
+                    std::swap(y0, y1);
+                }
+
                 for (int y = y0; y <= y1; ++y)
                 {
                     *pixel_xy(x0, y) = color;
@@ -337,6 +356,121 @@ namespace tdjx
         void rectangle_fill(int x0, int y0, int x1, int y1, int color)
         {
             rectangle_fill(Rect{ x0, y0, x1, y1 }, color);
+        }
+
+        void triangle(int x0, int y0, int x1, int y1, int x2, int y2, int color)
+        {
+            mask_color(color);
+
+            struct Point { int x, y; };
+
+            Point points[3] =
+            {
+                { x0, y0 },
+                { x1, y1 },
+                { x2, y2 }
+            };
+
+            [&points]()
+            {
+                // insertion sort but unrolled for 3 items
+                if (points[0].y > points[1].y)
+                {
+                    std::swap(points[1], points[0]);
+                }
+                if (points[1].y > points[2].y)
+                {
+                    std::swap(points[2], points[1]);
+                }
+                if (points[0].y > points[1].y)
+                {
+                    std::swap(points[1], points[0]);
+                }
+            }();
+
+            // TODO: currently assuming inputs result in valid triangles, should maybe not do that
+
+            auto flatTop = [color](Point* points)
+            {
+                int botx = points[2].x;
+                int boty = points[2].y;
+                int y = points[0].y;
+                int leftx = points[0].x;
+                int rightx = points[1].x;
+
+                float32 mleft = static_cast<float32>(botx - leftx) / static_cast<float32>(boty - y);
+                float32 mright = static_cast<float32>(botx - rightx) / static_cast<float32>(boty - y);
+
+                float32 left = static_cast<float32>(botx);
+                float32 right = static_cast<float32>(botx);
+
+                for (int i = boty; i > y; --i)
+                {
+                    scanline_safe(i, static_cast<int>(left), static_cast<int>(right), color);
+                    left -= mleft;
+                    right -= mright;
+                }
+            };
+
+            auto flatBottom = [color](Point* points)
+            {
+                int topx = points[0].x;
+                int topy = points[0].y;
+                int y = points[1].y;
+                int leftx = points[1].x;
+                int rightx = points[2].x;
+
+                float32 mleft = static_cast<float32>(leftx - topx) / static_cast<float32>(y - topy);
+                float32 mright = static_cast<float32>(rightx - topx) / static_cast<float32>(y - topy);
+
+                float32 left = static_cast<float32>(topx);
+                float32 right = static_cast<float32>(topx);
+
+                for (int i = topy; i <= y; ++i)
+                {
+                    scanline_safe(i, static_cast<int>(left), static_cast<int>(right), color);
+                    left += mleft;
+                    right += mright;
+                }
+            };
+
+            // flat top
+            if (points[0].y == points[1].y)
+            {
+                flatTop(points);
+            }
+            // flat bottom
+            else if (points[1].y == points[2].y)
+            {
+                flatBottom(points);
+            }
+            // both
+            else
+            {
+                float32 dy1 = static_cast<float32>(points[1].y - points[0].y);
+                float32 dy2 = static_cast<float32>(points[2].y - points[1].y);
+                float32 dx = static_cast<float32>(points[2].x - points[0].x);
+                
+                int x4 = points[0].x + static_cast<int>(dy1 / dy2 * dx);
+                int y4 = points[1].y;
+
+                Point top[3] = {
+                    points[0],
+                    points[1],
+                    { x4, y4 }
+                };
+
+                Point bottom[3] = {
+                    points[1],
+                    { x4, y4 },
+                    points[2]
+                };
+
+                flatBottom(top);
+                flatTop(bottom);
+
+                scanline_safe(y4, points[1].x, x4, 8);
+            }
         }
 
         void blit(ImageHandle imageHandle, int x0, int y0)
@@ -497,6 +631,16 @@ namespace tdjx
                     return true;
                 }
             }
+
+            bool get_image_rect(const ByteImage& image, Rect& destination)
+            {
+                if (image.width > 0 && image.height > 0)
+                {
+                    destination = { 0, 0, image.width - 1, image.height - 1 };
+                    return true;
+                }
+                return false;
+            }
         }
 
         namespace palette
@@ -576,7 +720,7 @@ namespace tdjx
                     switch (bpp)
                     {
                         // 1 or 2 channel images have an intensity and optional alpha so it's pretty easy to 
-                    case 1: 
+                    case 1:
                     case 2:
                         v = *pixel; break;
                         if (v >= palette.size)

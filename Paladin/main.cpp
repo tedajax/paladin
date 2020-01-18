@@ -176,9 +176,17 @@ int main(int argc, char* argv[])
 
         tdjx::gfx::clear(0);
 
-        tdjx::gfx::blit(image, 50, 50);
-        //float32 tt = time * 8;
+        //tdjx::gfx::blit(image, 50, 50);
+        float32 tt = time * tdjx::math::TAU / 6;
 
+        int x = 160;
+        int y = 120;
+
+        //tdjx::gfx::line(x, y, x + std::cos(tt) * 50, y + std::sin(tt) * 50, 8);
+
+        tdjx::gfx::triangle(60, 20, 300, 20, 180, 140, 8);
+        tdjx::gfx::triangle(160, 20, 100, 220, 190, 220, 16);
+        tdjx::gfx::triangle(x - 30, y + 40, x + 10, y - 33, x + std::cos(tt) * 50, y + std::sin(tt) * 50, 29);
 
         //for (int i = 0; i < 256; ++i)
         //{

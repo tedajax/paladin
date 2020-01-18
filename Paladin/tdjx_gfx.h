@@ -16,6 +16,11 @@ namespace tdjx
             int x0, y0, x1, y1;
         };
 
+        static inline bool operator==(const Rect& a, const Rect& b)
+        { 
+            return a.x0 == b.x0 && a.x1 == b.x1 && a.y0 == b.y0 && a.y1 == b.y1;
+        };
+
         struct Palette
         {
             std::vector<uint8> data;
@@ -49,6 +54,7 @@ namespace tdjx
         void circle_fill(int x0, int y0, int radius, int color);
         void rectangle(int x0, int y0, int x1, int y1, int color);
         void rectangle_fill(int x0, int y0, int x1, int y1, int color);
+        void triangle(int x0, int y0, int x1, int y1, int x2, int y2, int color);
         void blit(ImageHandle imageHandle, int x0, int y0);
 
         void* get_context();
@@ -56,6 +62,8 @@ namespace tdjx
 
         namespace rect
         {
+            const Rect kInvalid = { 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF };
+
             inline int width(const Rect& self);
             inline int height(const Rect& self);
 
@@ -64,6 +72,8 @@ namespace tdjx
 
             bool clip_rect(const Rect& source, Rect& dest);
             bool clip_line(const Rect& r, int& x0, int& y0, int& x1, int& y1);
+
+            bool get_image_rect(const ByteImage& image, Rect& destination);
         }
 
         namespace palette

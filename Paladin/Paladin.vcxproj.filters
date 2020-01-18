@@ -132,5 +132,8 @@
     <ClInclude Include="util.h">
       <Filter>core\util</Filter>
     </ClInclude>
+    <ClInclude Include="tdjx_math.h">
+      <Filter>core\math</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
