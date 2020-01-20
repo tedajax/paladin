@@ -448,10 +448,10 @@ namespace tdjx
             else
             {
                 float32 dy1 = static_cast<float32>(points[1].y - points[0].y);
-                float32 dy2 = static_cast<float32>(points[2].y - points[1].y);
+                float32 dy = static_cast<float32>(points[2].y - points[0].y);
                 float32 dx = static_cast<float32>(points[2].x - points[0].x);
                 
-                int x4 = points[0].x + static_cast<int>(dy1 / dy2 * dx);
+                int x4 = points[0].x + static_cast<int>(dy1 / dy * dx);
                 int y4 = points[1].y;
 
                 Point top[3] = {
