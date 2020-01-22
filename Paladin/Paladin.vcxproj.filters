@@ -25,6 +25,9 @@
     <Filter Include="core\util">
       <UniqueIdentifier>{5e8eba35-ca08-451d-9f37-2436f25edb4f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="games">
+      <UniqueIdentifier>{c737f769-794a-481e-98ba-88829fa07041}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="imgui.cpp">
@@ -75,6 +78,9 @@
     </ClCompile>
     <ClCompile Include="util.cpp">
       <Filter>core\util</Filter>
+    </ClCompile>
+    <ClCompile Include="game_wolf.cpp">
+      <Filter>games</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -134,6 +140,10 @@
     </ClInclude>
     <ClInclude Include="tdjx_math.h">
       <Filter>core\math</Filter>
+    </ClInclude>
+    <ClInclude Include="tdjx_game.h" />
+    <ClInclude Include="game_wolf.h">
+      <Filter>games</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

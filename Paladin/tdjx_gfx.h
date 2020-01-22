@@ -59,6 +59,7 @@ namespace tdjx
 
         void* get_context();
         uint8* get_pixels();
+        void query_screen_dimensions(int& width, int& height);
 
         namespace rect
         {

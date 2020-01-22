@@ -503,6 +503,12 @@ namespace tdjx
             return g_gfx.pixels;
         }
 
+        void query_screen_dimensions(int& width, int& height)
+        {
+            width = g_gfx.width;
+            height = g_gfx.height;
+        }
+
         namespace rect
         {
             inline int width(const Rect& self)
