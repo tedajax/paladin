@@ -82,6 +82,9 @@
     <ClCompile Include="game_wolf.cpp">
       <Filter>games</Filter>
     </ClCompile>
+    <ClCompile Include="game_lab.cpp">
+      <Filter>games</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="imconfig.h">
@@ -143,6 +146,9 @@
     </ClInclude>
     <ClInclude Include="tdjx_game.h" />
     <ClInclude Include="game_wolf.h">
+      <Filter>games</Filter>
+    </ClInclude>
+    <ClInclude Include="game_lab.h">
       <Filter>games</Filter>
     </ClInclude>
   </ItemGroup>

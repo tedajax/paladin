@@ -3,8 +3,6 @@
 #include "types.h"
 #include "tdjx_game.h"
 
-struct SDL_Window;
-
 struct WolfContext
 {
     struct Player
@@ -14,11 +12,14 @@ struct WolfContext
     };
 
     Player player = { 2, 4, 0 };
+    SDL_Window* window = nullptr;
 };
 
 struct WolfGame : public tdjx::Game<WolfContext>
 {
-    void init(void* userData) override final;
+    WolfGame(SDL_Window* window);
+    ~WolfGame();
+
     void update() override final;
     void render() override final;
 };

@@ -5,7 +5,7 @@
 #include <functional>
 #include <optional>
 
-struct SDL_window;
+struct SDL_Window;
 
 namespace tdjx
 {
@@ -17,7 +17,6 @@ namespace tdjx
 
     struct BaseGame
     {
-        virtual void init(void* userData) = 0;
         virtual void update() = 0;
         virtual void render() = 0;
 

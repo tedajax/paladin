@@ -42,6 +42,7 @@ namespace tdjx
         const int kInvalidHandle = -1;
 
         void init_with_window(int width, int height, SDL_Window* window);
+        void load_palette(const char* filename);
         void shutdown();
 
         ImageHandle load_image(const char* filename);
@@ -57,9 +58,12 @@ namespace tdjx
         void triangle(int x0, int y0, int x1, int y1, int x2, int y2, int color);
         void blit(ImageHandle imageHandle, int x0, int y0);
 
+        void flip();
+
         void* get_context();
         uint8* get_pixels();
         void query_screen_dimensions(int& width, int& height);
+        void query_palette_size(int& size);
 
         namespace rect
         {

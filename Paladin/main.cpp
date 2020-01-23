@@ -35,6 +35,7 @@
 #include <glm/glm.hpp>
 
 #include "game_wolf.h"
+#include "game_lab.h"
 
 using Random = effolkronium::random_static;
 
@@ -47,19 +48,17 @@ int main(int argc, char* argv[])
     //const int kWindowWidth = 1440;
     //const int kWindowHeight = 1080;
     const int kWindowWidth = 640;
-    const int kWindowHeight = 480;
+    const int kWindowHeight = 360;
     
+    uint32 windowFlags = SDL_WINDOW_OPENGL;
+    windowFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+
     SDL_Window* window = SDL_CreateWindow(
         "Paladin",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         kWindowWidth, kWindowHeight,
-        SDL_WINDOW_OPENGL);
-    
-    const int k_width = 320;
-    const int k_height = 240;
-
-    tdjx::gfx::init_with_window(k_width, k_height, window);
-    
+        windowFlags);
+        
     // ImGui initialization
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -79,15 +78,18 @@ int main(int argc, char* argv[])
 
     bool isRunning = true;
     bool shouldReloadShaders = false;
+    bool showImgui = true;
 
     auto app_quit = [&isRunning]() { isRunning = false; };
     auto app_reload_shaders = [&shouldReloadShaders]() { shouldReloadShaders = true; };
+    auto toggle_imgui = [&showImgui]() { showImgui = !showImgui; };
 
     const std::unordered_map<SDL_Scancode, std::function<void(void)>> kDebugCommands = {
         { SDL_SCANCODE_ESCAPE, app_quit },
         { SDL_SCANCODE_F2, app_reload_shaders },
         { SDL_SCANCODE_F3, tdjx::render::prev_mode },
         { SDL_SCANCODE_F4, tdjx::render::next_mode },
+        { SDL_SCANCODE_F8, toggle_imgui },
         { SDL_SCANCODE_P, []() { __debugbreak(); } },
     };
 
@@ -115,9 +117,7 @@ int main(int argc, char* argv[])
         1, 5, 7
     };
 
-    std::unique_ptr<BaseGame> game = std::make_unique<WolfGame>();
-
-    game->init(window);
+    std::unique_ptr<BaseGame> game(new LabGame(window));
 
     while (isRunning)
     {
@@ -194,6 +194,7 @@ int main(int argc, char* argv[])
         ImGui_ImplSDL2_NewFrame(window);
         ImGui::NewFrame();
 
+        if (showImgui)
         {
             ImGui::Begin("Debug");
 
@@ -208,6 +209,11 @@ int main(int argc, char* argv[])
             if (ImGui::Button(tdjx::render::get_mode_name()))
             {
                 tdjx::render::next_mode();
+            }
+
+            if (ImGui::Button(tdjx::render::get_filtering_name()))
+            {
+                tdjx::render::next_filtering();
             }
 
             ImGui::End();
@@ -229,8 +235,6 @@ int main(int argc, char* argv[])
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
-
-    tdjx::gfx::shutdown();
 
     SDL_DestroyWindow(window);
     SDL_Quit();

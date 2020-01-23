@@ -113,14 +113,18 @@ namespace tdjx
 
             g_gfx.pixels = new uint8[g_gfx.size];
 
-            const char* palleteFile = "assets/palettes/arne32.png";
-            if (palette::try_create_palette_from_file(palleteFile, g_gfx.palette))
+            load_palette("assets/palettes/arne32.png");
+        }
+
+        void load_palette(const char* filename)
+        {
+            if (palette::try_create_palette_from_file(filename, g_gfx.palette))
             {
                 tdjx::render::set_palette(palette::data(g_gfx.palette), g_gfx.palette.size);
             }
             else
             {
-                printf("Failed to create palette from '%s'.\n", palleteFile);
+                printf("Failed to create palette from '%s'.\n", filename);
             }
         }
 
@@ -493,6 +497,11 @@ namespace tdjx
             }
         }
 
+        void flip()
+        {
+            tdjx::render::set_intensity(get_pixels());
+        }
+
         void* get_context()
         {
             return &g_gfx;
@@ -507,6 +516,11 @@ namespace tdjx
         {
             width = g_gfx.width;
             height = g_gfx.height;
+        }
+
+        void query_palette_size(int& size)
+        {
+            size = g_gfx.palette.size;
         }
 
         namespace rect

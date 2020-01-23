@@ -25,9 +25,18 @@ Room testRoom = {
 
 bool cast_ray(const Room& room, float32 ox, float32 oy, float32 rot, float32& distOut);
 
-void WolfGame::init(void* userData)
+WolfGame::WolfGame(SDL_Window* window)
 {
+    const int k_width = 320;
+    const int k_height = 240;
 
+    context.window = window;
+    tdjx::gfx::init_with_window(k_width, k_height, window);
+}
+
+WolfGame::~WolfGame()
+{
+    tdjx::gfx::shutdown();
 }
 
 void WolfGame::update()
@@ -40,7 +49,6 @@ void WolfGame::update()
     float32 dx = std::cos(player.rot);
     float32 dy = std::sin(player.rot);
 
-
     if (keys[SDL_SCANCODE_UP])
     {
         player.x += dx * dt * 4;
@@ -52,13 +60,14 @@ void WolfGame::update()
         player.y -= dy * dt * 4;
     }
 
+    const float32 pi = static_cast<float32>(M_PI);
     if (keys[SDL_SCANCODE_LEFT])
     {
-        player.rot -= M_PI * dt;
+        player.rot -= pi * dt;
     }
     if (keys[SDL_SCANCODE_RIGHT])
     {
-        player.rot += M_PI * dt;
+        player.rot += pi * dt;
     }
 }
 
@@ -80,7 +89,7 @@ void WolfGame::render()
         {
             float32 dist;
 
-            float32 r = player.rot + (static_cast<float32>(x) / width)* M_PI / 4.f;
+            float32 r = player.rot + (static_cast<float32>(x) / width)* static_cast<float32>(M_PI) / 4.f;
 
             if (cast_ray(room, player.x, player.y, r, dist))
             {
@@ -127,8 +136,8 @@ void WolfGame::render()
         tdjx::gfx::circle(hitX, hitY, 4, 28);
 
         draw_ray(player.x, player.y, player.rot, 8, 8);
-        draw_ray(player.x, player.y, player.rot - M_PI / 4.f, 8, 8);
-        draw_ray(player.x, player.y, player.rot + M_PI / 4.f, 8, 8);
+        draw_ray(player.x, player.y, player.rot - static_cast<float32>(M_PI) / 4.f, 8, 8);
+        draw_ray(player.x, player.y, player.rot + static_cast<float32>(M_PI) / 4.f, 8, 8);
     }
 
     tdjx::render::set_intensity(tdjx::gfx::get_pixels());
