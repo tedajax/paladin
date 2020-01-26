@@ -3,6 +3,7 @@
 in vec2 uv;
 
 uniform int mode = 0;
+uniform float scalar = 1;
 uniform sampler2D intensity;
 uniform sampler2D palette;
 
@@ -10,10 +11,9 @@ out vec3 color;
 
 void main()
 {
-	//color = texture(palette, texture(intensity, uv).rg).rgb;
 	if (mode == 0)
 	{
-		vec2 index = texture(intensity, uv).rg;
+		vec2 index = texture(intensity, uv).rg * scalar;
 		color = texture(palette, index).rgb;
 	}
 	else if (mode == 1)

@@ -33,13 +33,9 @@ namespace tdjx
         void draw();
 
         const char* get_mode_name();
-        const char* get_filtering_name();
         void set_mode(Mode mode);
         void prev_mode();
         void next_mode();
-        void set_filtering(Filtering filtering);
-        void prev_filtering();
-        void next_filtering();
 
         void set_texture_data(uint* data, int width, int height);
         void set_palette(const uint8* data, int size);

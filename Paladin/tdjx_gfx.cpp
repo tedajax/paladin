@@ -11,6 +11,8 @@
 #include "util.h"
 #include "renderer.h"
 
+using namespace tdjx::math;
+
 namespace tdjx
 {
     namespace gfx
@@ -53,22 +55,25 @@ namespace tdjx
 
         struct
         {
-            uint8* pixels = nullptr;
-            int width = 0;
-            int height = 0;
-            int size = 0;
-            Rect clipArea = Rect{ 0, 0, 0, 0 };
+            Canvas screenCanvas;
+            Canvas& activeCanvas = screenCanvas;
+            Rect<int> clipArea = Rect<int>{ 0, 0, 0, 0 };
             Palette palette;
             ByteImage imageBank[kMaxLoadedImages];
             int nextImageId = 0;
         } g_gfx;
 
-        uint8* pixel_xy(int x, int y)
+        uint8* pixel_xy(Canvas& canvas, int x, int y)
         {
-            return &g_gfx.pixels[y * g_gfx.width + x];
+            return canvas.data.data() + x + y * canvas.width;
         }
 
-        bool gfx_clip_rect(Rect& r)
+        uint8* pixel_xy(int x, int y)
+        {
+            return pixel_xy(g_gfx.activeCanvas, x, y);
+        }
+
+        bool gfx_clip_rect(Rect<int>& r)
         {
             return rect::clip_rect(g_gfx.clipArea, r);
         }
@@ -106,12 +111,15 @@ namespace tdjx
         {
             tdjx::render::init(window, width, height);
 
-            g_gfx.width = width;
-            g_gfx.height = height;
-            g_gfx.clipArea = { 0, 0, g_gfx.width - 1, g_gfx.height - 1 };
-            g_gfx.size = g_gfx.width * g_gfx.height;
+            g_gfx.screenCanvas = {};
+            g_gfx.screenCanvas.data.resize(width * height);
+            std::fill(g_gfx.screenCanvas.data.begin(), g_gfx.screenCanvas.data.end(), 0);
+            g_gfx.screenCanvas.width = width;
+            g_gfx.screenCanvas.height = height;
 
-            g_gfx.pixels = new uint8[g_gfx.size];
+            set_canvas();
+
+            g_gfx.clipArea = { 0, 0, width - 1, height - 1 };
 
             load_palette("assets/palettes/arne32.png");
         }
@@ -131,7 +139,6 @@ namespace tdjx
         void shutdown()
         {
             tdjx::render::shutdown();
-            delete g_gfx.pixels;
         }
 
         ImageHandle load_image(const char* filename)
@@ -159,7 +166,22 @@ namespace tdjx
 
         void mask_color(int& color)
         {
-            color = (color & g_gfx.palette.mask) * g_gfx.palette.scalar;
+            color = (color & g_gfx.palette.mask);
+        }
+
+        void set_canvas(Canvas& canvas)
+        {
+            g_gfx.activeCanvas = canvas;
+        }
+
+        void set_canvas()
+        {
+            g_gfx.activeCanvas = g_gfx.screenCanvas;
+        }
+
+        void draw_canvas_to_screen(Canvas& canvas)
+        {
+            std::copy(canvas.data.begin(), canvas.data.end(), g_gfx.screenCanvas.data.begin());
         }
 
         void clear(int color)
@@ -232,7 +254,7 @@ namespace tdjx
 
         void circle(int x0, int y0, int radius, int color)
         {
-            Rect bounds = Rect{ x0 - radius, y0 - radius, x0 + radius, y0 + radius };
+            Rect<int> bounds = Rect<int>{ x0 - radius, y0 - radius, x0 + radius, y0 + radius };
             if (!rect::clip_rect(g_gfx.clipArea, bounds))
             {
                 return;
@@ -281,7 +303,7 @@ namespace tdjx
 
         void circle_fill(int x0, int y0, int radius, int color)
         {
-            Rect bounds = Rect{ x0 - radius, y0 - radius, x0 + radius, y0 + radius };
+            Rect<int> bounds = Rect<int>{ x0 - radius, y0 - radius, x0 + radius, y0 + radius };
             if (!rect::clip_rect(g_gfx.clipArea, bounds))
             {
                 return;
@@ -324,7 +346,7 @@ namespace tdjx
             }
         }
 
-        void rectangle(Rect r, int color)
+        void rectangle(Rect<int> r, int color)
         {
             if (!rect::clip_rect(g_gfx.clipArea, r))
             {
@@ -339,10 +361,10 @@ namespace tdjx
 
         void rectangle(int x0, int y0, int x1, int y1, int color)
         {
-            rectangle(Rect{ x0, y0, x1, y1 }, color);
+            rectangle(Rect<int>{ x0, y0, x1, y1 }, color);
         }
 
-        void rectangle_fill(Rect r, int color)
+        void rectangle_fill(Rect<int> r, int color)
         {
             if (!rect::clip_rect(g_gfx.clipArea, r))
             {
@@ -359,7 +381,7 @@ namespace tdjx
 
         void rectangle_fill(int x0, int y0, int x1, int y1, int color)
         {
-            rectangle_fill(Rect{ x0, y0, x1, y1 }, color);
+            rectangle_fill(Rect<int>{ x0, y0, x1, y1 }, color);
         }
 
         void triangle(int x0, int y0, int x1, int y1, int x2, int y2, int color)
@@ -481,7 +503,7 @@ namespace tdjx
         {
             const ByteImage image = g_gfx.imageBank[imageHandle];
 
-            Rect r = { x0, y0, x0 + image.width - 1, y0 + image.height - 1 };
+            Rect<int> r = { x0, y0, x0 + image.width - 1, y0 + image.height - 1 };
             if (!rect::clip_rect(g_gfx.clipArea, r))
             {
                 return;
@@ -509,158 +531,18 @@ namespace tdjx
 
         uint8* get_pixels()
         {
-            return g_gfx.pixels;
+            return g_gfx.screenCanvas.data.data();
         }
 
         void query_screen_dimensions(int& width, int& height)
         {
-            width = g_gfx.width;
-            height = g_gfx.height;
+            width = g_gfx.screenCanvas.width;
+            height = g_gfx.screenCanvas.height;
         }
 
         void query_palette_size(int& size)
         {
             size = g_gfx.palette.size;
-        }
-
-        namespace rect
-        {
-            inline int width(const Rect& self)
-            {
-                return std::abs(self.x0 - self.x1);
-            }
-
-            inline int height(const Rect& self)
-            {
-                return std::abs(self.y0 - self.y1);
-            }
-
-            inline bool contains_point(const Rect& self, int x, int y)
-            {
-                return x >= self.x0 && y >= self.y0 && x <= self.x1 && y <= self.y1;
-            }
-
-            inline bool intersect(const Rect& a, const Rect& b)
-            {
-                return a.x0 <= b.x1 &&
-                    a.x1 >= b.x0 &&
-                    a.y0 <= b.y1 &&
-                    a.y1 >= b.y0;
-            }
-
-            bool clip_rect(const Rect& source, Rect& dest)
-            {
-                dest.x0 = std::max(dest.x0, source.x0);
-                dest.y0 = std::max(dest.y0, source.y0);
-                dest.x1 = std::min(dest.x1, source.x1);
-                dest.y1 = std::min(dest.y1, source.y1);
-
-                if (dest.x0 > dest.x1 || dest.y0 > dest.y1)
-                {
-                    return false;
-                }
-
-                return true;
-            }
-
-            bool clip_line(const Rect& r, int& x0, int& y0, int& x1, int& y1)
-            {
-                struct point { int x, y; };
-
-                const int xmin = r.x0;
-                const int xmax = r.x1;
-                const int ymin = r.y0;
-                const int ymax = r.y1;
-
-                enum side
-                {
-                    k_none = 0,
-                    k_left = 1, k_right = 2, k_top = 4, k_bottom = 8
-                };
-
-                auto calcRegionCode = [=](const point& p)
-                {
-                    return static_cast<int>(
-                        ((p.x < xmin) ? k_left : k_none) +
-                        ((p.x > xmax) ? k_right : k_none) +
-                        ((p.y < ymin) ? k_top : k_none) +
-                        ((p.y > ymax) ? k_bottom : k_none));
-                };
-
-                point a = { x0, y0 };
-                point b = { x1, y1 };
-
-                while (true)
-                {
-                    int code1 = calcRegionCode(a);
-                    int code2 = calcRegionCode(b);
-
-                    if (code1 == 0 && code2 == 0)
-                    {
-                        // completely inside
-                        goto _is_visible;
-                    }
-                    else
-                    {
-                        if ((code1 & code2) != 0)
-                        {
-                            // completely outside
-                            return false;
-                        }
-                        else
-                        {
-                            // pick a point outside of the rectangle
-                            point* outside = &a;
-                            int outCode = code1;
-                            if (code1 == 0)
-                            {
-                                outside = &b;
-                                outCode = code2;
-                            }
-
-                            if (outCode & k_top)
-                            {
-                                outside->x = a.x + (b.x - a.x) * (ymin - a.y) / (b.y - a.y);
-                                outside->y = ymin;
-                            }
-                            else if (outCode & k_bottom)
-                            {
-                                outside->x = a.x + (b.x - a.x) * (ymax - a.y) / (b.y - a.y);
-                                outside->y = ymax;
-                            }
-                            else if (outCode & k_right)
-                            {
-                                outside->y = a.y + (b.y - a.y) * (xmax - a.x) / (b.x - a.x);
-                                outside->x = xmax;
-                            }
-                            else if (outCode & k_left)
-                            {
-                                outside->y = a.y + (b.y - a.y) * (xmin - a.x) / (b.x - a.x);
-                                outside->x = xmin;
-                            }
-                        }
-                    }
-                }
-
-            _is_visible:
-                {
-                    x0 = a.x;
-                    y0 = a.y;
-                    x1 = b.x;
-                    y1 = b.y;
-                    return true;
-                }
-            }
-
-            bool get_image_rect(const ByteImage& image, Rect& destination)
-            {
-                if (image.width > 0 && image.height > 0)
-                {
-                    destination = { 0, 0, image.width - 1, image.height - 1 };
-                    return true;
-                }
-                return false;
-            }
         }
 
         namespace palette
@@ -768,6 +650,44 @@ namespace tdjx
                 }
 
                 return true;
+            }
+
+            bool get_image_rect(const ByteImage& image, Rect<int>& destination)
+            {
+                if (image.width > 0 && image.height > 0)
+                {
+                    destination = { 0, 0, image.width - 1, image.height - 1 };
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        namespace canvas
+        {
+            uint8* pixel_xy(Canvas& canvas, int x, int y)
+            {
+                return canvas.data.data() + x + y * canvas.width;
+            }
+
+            Canvas create_blank_from_screen()
+            {
+                Canvas result;
+                result.width = g_gfx.screenCanvas.width;
+                result.height = g_gfx.screenCanvas.height;
+                result.data.resize(result.width * result.height);
+                std::fill(result.data.begin(), result.data.end(), 0);
+                return result;
+            }
+
+            Canvas create_copy_from_screen()
+            {
+                Canvas result;
+                result.width = g_gfx.screenCanvas.width;
+                result.height = g_gfx.screenCanvas.height;
+                result.data.resize(result.width * result.height);
+                std::copy(g_gfx.screenCanvas.data.begin(), g_gfx.screenCanvas.data.end(), result.data.begin());
+                return result;
             }
         }
     }

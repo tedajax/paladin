@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include "tdjx_math.h"
 
 #include <vector>
 #include <unordered_map>
@@ -11,15 +12,7 @@ namespace tdjx
 {
     namespace gfx
     {
-        struct Rect
-        {
-            int x0, y0, x1, y1;
-        };
-
-        static inline bool operator==(const Rect& a, const Rect& b)
-        { 
-            return a.x0 == b.x0 && a.x1 == b.x1 && a.y0 == b.y0 && a.y1 == b.y1;
-        };
+        using ::tdjx::math::Rect;
 
         struct Palette
         {
@@ -38,6 +31,8 @@ namespace tdjx
             int height;
         };
 
+        using Canvas = ByteImage;
+
         typedef int ImageHandle;
         const int kInvalidHandle = -1;
 
@@ -48,13 +43,19 @@ namespace tdjx
         ImageHandle load_image(const char* filename);
         void free_image(ImageHandle imageHandle);
 
+        void set_canvas(Canvas& canvas);
+        void set_canvas();
+        void draw_canvas_to_screen(Canvas& canvas);
+
         void clear(int color);
         void point(int x, int y, int color);
         void line(int x0, int y0, int x1, int y1, int color);
         void circle(int x0, int y0, int radius, int color);
         void circle_fill(int x0, int y0, int radius, int color);
         void rectangle(int x0, int y0, int x1, int y1, int color);
+        void rectangle(Rect<int> r, int color);
         void rectangle_fill(int x0, int y0, int x1, int y1, int color);
+        void rectangle_fill(Rect<int> r, int color);
         void triangle(int x0, int y0, int x1, int y1, int x2, int y2, int color);
         void blit(ImageHandle imageHandle, int x0, int y0);
 
@@ -64,22 +65,6 @@ namespace tdjx
         uint8* get_pixels();
         void query_screen_dimensions(int& width, int& height);
         void query_palette_size(int& size);
-
-        namespace rect
-        {
-            const Rect kInvalid = { 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF };
-
-            inline int width(const Rect& self);
-            inline int height(const Rect& self);
-
-            inline bool contains_point(const Rect& self, int x, int y);
-            inline bool intersect(const Rect& a, const Rect& b);
-
-            bool clip_rect(const Rect& source, Rect& dest);
-            bool clip_line(const Rect& r, int& x0, int& y0, int& x1, int& y1);
-
-            bool get_image_rect(const ByteImage& image, Rect& destination);
-        }
 
         namespace palette
         {
@@ -91,6 +76,14 @@ namespace tdjx
         namespace byte_image
         {
             bool try_create_from_image_with_palette(uint8* data, int width, int height, int bpp, const Palette& palette, ByteImage& out);
+            bool get_image_rect(const ByteImage& image, Rect<int>& destination);
+        }
+
+        namespace canvas
+        {
+            uint8* pixel_xy(Canvas& canvas, int x, int y);
+            Canvas create_blank_from_screen();
+            Canvas create_copy_from_screen();
         }
     }
 }

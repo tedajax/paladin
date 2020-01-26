@@ -20,6 +20,12 @@ namespace tdjx
         virtual void update() = 0;
         virtual void render() = 0;
 
+        virtual void on_key_down(int key) {}
+        virtual void on_key_up(int key) {}
+        virtual void on_mouse_down(int x, int y, int button) {}
+        virtual void on_mouse_up(int x, int y, int button) {}
+        virtual void on_mouse_move(int x, int y, int dx, int dy) {}
+
         GameTime time;
     };
 

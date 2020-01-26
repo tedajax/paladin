@@ -50,6 +50,10 @@ namespace tdjx
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
             glBindTexture(GL_TEXTURE_2D, 0);
             glActiveTexture(GL_TEXTURE0);
+
+            glUseProgram(r.material.programId);
+            glUniform1f(r.material.uniforms["scalar"], 255.0f / size);
+            glUseProgram(0);
         }
 
         void set_intensity(const uint8* data)
@@ -125,11 +129,9 @@ namespace tdjx
 
             r.material = material::create("assets/shaders/screen_quad.vert",
                 "assets/shaders/screen_quad_indexed.frag",
-                { "intensity", "palette", "mode", "bufferWindowRatio" });
+                { "intensity", "palette", "mode", "scalar" });
 
             on_resize();
-
-            set_filtering(Filtering::kNearest);
 
             return true;
         }
@@ -149,10 +151,6 @@ namespace tdjx
             float32 bufferAspect = static_cast<float32>(r.width) / r.height;
             float32 windowAspect = static_cast<float32>(windowWidth) / windowHeight;
 
-            float32 offset = bufferAspect / windowAspect;
-
-            glUniform1f(r.material.uniforms["bufferWindowRatio"], offset);
-
             glUseProgram(0);
         }
 
@@ -165,16 +163,6 @@ namespace tdjx
         const char* get_mode_name()
         {
             return kModeNames[static_cast<int>(r.renderMode)];
-        }
-
-        const char* get_filtering_name()
-        {
-            switch (r.filtering)
-            {
-            case Filtering::kNearest: return "Nearest";
-            case Filtering::KLinear: return "Linear";
-            default: return "Unknown";
-            }
         }
 
         void set_mode(Mode mode)
@@ -201,49 +189,6 @@ namespace tdjx
             set_mode(static_cast<Mode>(modeId));
         }
 
-        void set_filtering(Filtering filtering)
-        {
-            r.filtering = filtering;
-
-            glBindTexture(GL_TEXTURE_2D, get_texture(Textures::kIntensity));
-            
-            int f;
-            switch (filtering)
-            {
-            default:
-            case Filtering::kNearest: f = GL_NEAREST;
-            case Filtering::KLinear: f = GL_LINEAR;
-            }
-
-
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, get_texture(Textures::kIntensity));
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, f);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, f);
-            glGenerateMipmap(GL_TEXTURE_2D);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, r.width, r.height, 0, GL_RED, GL_UNSIGNED_BYTE, nullptr);
-            glBindTexture(GL_TEXTURE_2D, 0);
-        }
-
-        void prev_filtering()
-        {
-            int filteringId = static_cast<int>(r.filtering) - 1;
-            if (filteringId < 0)
-            {
-                filteringId = static_cast<int>(Filtering::kCount) - 1;
-            }
-            set_filtering(static_cast<Filtering>(filteringId));
-        }
-
-        void next_filtering()
-        {
-            int filteringId = static_cast<int>(r.filtering) + 1;
-            if (filteringId >= static_cast<int>(Filtering::kCount))
-            {
-                filteringId = 0;
-            }
-            set_filtering(static_cast<Filtering>(filteringId));
-        }
 
         void draw()
         {

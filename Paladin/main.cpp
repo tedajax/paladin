@@ -47,17 +47,22 @@ int main(int argc, char* argv[])
 
     //const int kWindowWidth = 1440;
     //const int kWindowHeight = 1080;
-    const int kWindowWidth = 640;
-    const int kWindowHeight = 360;
+    const int kWindowWidth = 1280;
+    const int kWindowHeight = 640;
     
     uint32 windowFlags = SDL_WINDOW_OPENGL;
-    windowFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+    //windowFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+    //windowFlags |= SDL_WINDOW_ALLOW_HIGHDPI;
 
     SDL_Window* window = SDL_CreateWindow(
         "Paladin",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         kWindowWidth, kWindowHeight,
         windowFlags);
+
+    int ww, wh;
+    int wdw, wdh;
+    SDL_GetWindowSize(window, &ww, &wh);
         
     // ImGui initialization
     IMGUI_CHECKVERSION();
@@ -119,6 +124,10 @@ int main(int argc, char* argv[])
 
     std::unique_ptr<BaseGame> game(new LabGame(window));
 
+    SDL_GL_GetDrawableSize(window, &wdw, &wdh);
+
+    printf("w:  %d\nh:  %d\ndw: %d\ndh: %d\n", ww, wh, wdw, wdh);
+
     while (isRunning)
     {
         if (shouldReloadShaders)
@@ -141,8 +150,24 @@ int main(int argc, char* argv[])
                 {
                     search->second();
                 }
+                else
+                {
+                    game->on_key_down(event.key.keysym.scancode);
+                }
                 break;
             }
+            case SDL_KEYUP:
+                game->on_key_up(event.key.keysym.scancode);
+                break;
+            case SDL_MOUSEBUTTONDOWN:
+                game->on_mouse_down(event.button.x, event.button.y, event.button.button);
+                break;
+            case SDL_MOUSEBUTTONUP:
+                game->on_mouse_up(event.button.x, event.button.y, event.button.button);
+                break;
+            case SDL_MOUSEMOTION:
+                game->on_mouse_move(event.motion.x, event.motion.y, event.motion.xrel, event.motion.yrel);
+                break;
             case SDL_QUIT:
                 app_quit();
                 break;
@@ -211,14 +236,32 @@ int main(int argc, char* argv[])
                 tdjx::render::next_mode();
             }
 
-            if (ImGui::Button(tdjx::render::get_filtering_name()))
             {
-                tdjx::render::next_filtering();
+                int mx, my;
+                SDL_GetMouseState(&mx, &my);
+                ImGui::Text("Mouse Pos: %d, %d", mx, my);
+                
+                int windowWidth, windowHeight;
+                SDL_GetWindowSize(window, &windowWidth, &windowHeight);
+
+                float32 sx = static_cast<float32>(mx) / windowWidth;
+                float32 sy = static_cast<float32>(my) / windowHeight;
+                
+                int gfxWidth, gfxHeight;
+                tdjx::gfx::query_screen_dimensions(gfxWidth, gfxHeight);
+
+                int screenX = static_cast<int>(sx * gfxWidth);
+                int screenY = static_cast<int>(sy * gfxHeight);
+                ImGui::Text("Mouse Pos: %d, %d", screenX, screenY);
+
+                //tdjx::gfx::point(screenX, screenY, 8);
             }
+
 
             ImGui::End();
         }
 
+        tdjx::gfx::flip();
         // RENDER
         {
             ImGui::Render();

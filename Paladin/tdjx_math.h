@@ -194,7 +194,9 @@ namespace tdjx
         template <typename t_type>
         inline t_type lerp(t_type a, t_type b, float32 t)
         {
-            return static_cast<t_type>(static_cast<float32>(a) + static_cast<float32>(b - a) * t);
+            float32 af = static_cast<float32>(a);
+            float32 bf = static_cast<float32>(b);
+            return static_cast<t_type>(af + (bf - af) * t);
         }
 
         inline float32 lerp_angle(float32 a, float32 b, float32 t)
@@ -302,6 +304,238 @@ namespace tdjx
         {
             float32 target = from + delta_angle(from, to);
             return smooth_damp(from, target, velocity, time, maxSpeed, dt);
+        }
+
+        template <typename t_type>
+        struct Rect
+        {
+            t_type x0, y0, x1, y1;
+        };
+
+        template <typename t_type>
+        static inline bool operator==(const Rect<t_type>& a, const Rect<t_type>& b)
+        {
+            return a.x0 == b.x0 && a.x1 == b.x1 && a.y0 == b.y0 && a.y1 == b.y1;
+        };
+
+        template <typename t_type>
+        static inline bool operator!=(const Rect<t_type>& a, const Rect<t_type>& b)
+        {
+            return !(a == b);
+        }
+
+        namespace rect
+        {
+            const Rect<int> kInvalidIntRect = { 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF };
+            
+            template <typename t_type>
+            void unpack(const Rect<t_type>& self, t_type& x0, t_type& y0, t_type& x1, t_type& y1);
+
+            template <typename t_type>
+            int width(const Rect<t_type>& self);
+
+            template <typename t_type>
+            int height(const Rect<t_type>& self);
+
+            template <typename t_type>
+            Rect<t_type> lerp(const Rect<t_type>& a, const Rect<t_type>& b, float32 t);
+
+            template <typename t_type>
+            void constrain_to_aspect_ratio(Rect<t_type>& self, float32 aspectRatio);
+
+            template <typename t_type>
+            bool contains_point(const Rect<t_type>& self, t_type x, t_type y);
+
+            template <typename t_type>
+            bool intersect(const Rect<t_type>& a, const Rect<t_type>& b);
+
+            template <typename t_type>
+            bool clip_rect(const Rect<t_type>& source, Rect<t_type>& dest);
+
+            template <typename t_type>
+            bool clip_line(const Rect<t_type>& r, t_type& x0, t_type& y0, t_type& x1, t_type& y1);
+        }
+
+        namespace rect
+        {
+            template <typename t_type>
+            inline void unpack(const Rect<t_type>& self, t_type& x0, t_type& y0, t_type& x1, t_type& y1)
+            {
+                x0 = self.x0;
+                y0 = self.y0;
+                x1 = self.x1;
+                y1 = self.y1;
+            }
+
+            template <typename t_type>
+            inline int width(const Rect<t_type>& self)
+            {
+                return std::abs(self.x1 - self.x0);
+            }
+
+            template <typename t_type>
+            inline int height(const Rect<t_type>& self)
+            {
+                return std::abs(self.y1 - self.y0);
+            }
+
+            template <typename t_type>
+            inline Rect<t_type> lerp(const Rect<t_type>& a, const Rect<t_type>& b, float32 t)
+            {
+                Rect<t_type> result;
+
+                result.x0 = tdjx::math::lerp(a.x0, b.x0, t);
+                result.y0 = tdjx::math::lerp(a.y0, b.y0, t);
+                result.x1 = tdjx::math::lerp(a.x1, b.x1, t);
+                result.y1 = tdjx::math::lerp(a.y1, b.y1, t);
+
+                return result;
+            }
+
+            template <typename t_type>
+            void constrain_to_aspect_ratio(Rect<t_type>& self, float32 aspectRatio)
+            {
+                t_type w = width(self);
+                t_type h = height(self);
+                
+                float32 wf = static_cast<float32>(w);
+                float32 hf = static_cast<float32>(h);
+
+                aspectRatio = std::max(aspectRatio, 0.0001f);
+                
+                if (wf > hf * aspectRatio)
+                {
+                    hf = wf / aspectRatio;
+                }
+                else if (hf > wf / aspectRatio)
+                {
+                    wf = hf * aspectRatio;
+                }
+
+                self.x1 = self.x0 + static_cast<t_type>(wf);
+                self.y1 = self.y0 + static_cast<t_type>(hf);
+            }
+
+            template <typename t_type>
+            inline bool contains_point(const Rect<t_type>& self, t_type x, t_type y)
+            {
+                return x >= self.x0 && y >= self.y0 && x <= self.x1 && y <= self.y1;
+            }
+
+            template <typename t_type>
+            inline bool intersect(const Rect<t_type>& a, const Rect<t_type>& b)
+            {
+                return a.x0 <= b.x1 &&
+                    a.x1 >= b.x0 &&
+                    a.y0 <= b.y1 &&
+                    a.y1 >= b.y0;
+            }
+
+            template <typename t_type>
+            bool clip_rect(const Rect<t_type>& source, Rect<t_type>& dest)
+            {
+                dest.x0 = std::max(dest.x0, source.x0);
+                dest.y0 = std::max(dest.y0, source.y0);
+                dest.x1 = std::min(dest.x1, source.x1);
+                dest.y1 = std::min(dest.y1, source.y1);
+
+                if (dest.x0 > dest.x1 || dest.y0 > dest.y1)
+                {
+                    return false;
+                }
+
+                return true;
+            }
+
+            template <typename t_type>
+            bool clip_line(const Rect<t_type>& r, t_type& x0, t_type& y0, t_type& x1, t_type& y1)
+            {
+                struct point { t_type x, y; };
+
+                const t_type xmin = r.x0;
+                const t_type xmax = r.x1;
+                const t_type ymin = r.y0;
+                const t_type ymax = r.y1;
+
+                enum side
+                {
+                    k_none = 0,
+                    k_left = 1, k_right = 2, k_top = 4, k_bottom = 8
+                };
+
+                auto calcRegionCode = [=](const point& p)
+                {
+                    return static_cast<int>(
+                        ((p.x < xmin) ? k_left : k_none) +
+                        ((p.x > xmax) ? k_right : k_none) +
+                        ((p.y < ymin) ? k_top : k_none) +
+                        ((p.y > ymax) ? k_bottom : k_none));
+                };
+
+                point a = { x0, y0 };
+                point b = { x1, y1 };
+
+                while (true)
+                {
+                    int code1 = calcRegionCode(a);
+                    int code2 = calcRegionCode(b);
+
+                    if (code1 == 0 && code2 == 0)
+                    {
+                        // completely inside
+                        goto _is_visible;
+                    }
+                    else
+                    {
+                        if ((code1 & code2) != 0)
+                        {
+                            // completely outside
+                            return false;
+                        }
+                        else
+                        {
+                            // pick a point outside of the rectangle
+                            point* outside = &a;
+                            int outCode = code1;
+                            if (code1 == 0)
+                            {
+                                outside = &b;
+                                outCode = code2;
+                            }
+
+                            if (outCode & k_top)
+                            {
+                                outside->x = a.x + (b.x - a.x) * (ymin - a.y) / (b.y - a.y);
+                                outside->y = ymin;
+                            }
+                            else if (outCode & k_bottom)
+                            {
+                                outside->x = a.x + (b.x - a.x) * (ymax - a.y) / (b.y - a.y);
+                                outside->y = ymax;
+                            }
+                            else if (outCode & k_right)
+                            {
+                                outside->y = a.y + (b.y - a.y) * (xmax - a.x) / (b.x - a.x);
+                                outside->x = xmax;
+                            }
+                            else if (outCode & k_left)
+                            {
+                                outside->y = a.y + (b.y - a.y) * (xmin - a.x) / (b.x - a.x);
+                                outside->x = xmin;
+                            }
+                        }
+                    }
+                }
+
+            _is_visible:
+                {
+                    x0 = a.x;
+                    y0 = a.y;
+                    x1 = b.x;
+                    y1 = b.y;
+                    return true;
+                }
+            }
         }
     }
 }
