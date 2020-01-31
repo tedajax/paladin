@@ -50,6 +50,7 @@ namespace tdjx
         void clear(int color);
         void point(int x, int y, int color);
         void line(int x0, int y0, int x1, int y1, int color);
+        void line(const Rect<int>& segment, int color);
         void circle(int x0, int y0, int radius, int color);
         void circle_fill(int x0, int y0, int radius, int color);
         void rectangle(int x0, int y0, int x1, int y1, int color);

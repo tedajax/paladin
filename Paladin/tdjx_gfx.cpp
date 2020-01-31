@@ -252,6 +252,11 @@ namespace tdjx
             }
         }
 
+        void line(const Rect<int>& segment, int color)
+        {
+            line(segment.x0, segment.y0, segment.x1, segment.y1, color);
+        }
+
         void circle(int x0, int y0, int radius, int color)
         {
             Rect<int> bounds = Rect<int>{ x0 - radius, y0 - radius, x0 + radius, y0 + radius };
@@ -348,20 +353,35 @@ namespace tdjx
 
         void rectangle(Rect<int> r, int color)
         {
-            if (!rect::clip_rect(g_gfx.clipArea, r))
-            {
-                return;
-            }
-
-            line(r.x0, r.y0, r.x1, r.y0, color);
-            line(r.x0, r.y1, r.x1, r.y1, color);
-            line(r.x0, r.y0, r.x0, r.y1, color);
-            line(r.x1, r.y0, r.x1, r.y1, color);
+            rectangle(r.x0, r.y0, r.x1, r.y1, color);
         }
 
         void rectangle(int x0, int y0, int x1, int y1, int color)
         {
-            rectangle(Rect<int>{ x0, y0, x1, y1 }, color);
+            Rect<int> segmentT = { x0, y0, x1, y0 };
+            Rect<int> segmentB = { x0, y1, x1, y1 };
+            Rect<int> segmentL = { x0, y0, x0, y1 };
+            Rect<int> segmentR = { x1, y0, x1, y1 };
+
+            if (rect::clip_line(g_gfx.clipArea, segmentT))
+            {
+                line(segmentT, color);
+            }
+
+            if (rect::clip_line(g_gfx.clipArea, segmentB))
+            {
+                line(segmentB, color);
+            }
+
+            if (rect::clip_line(g_gfx.clipArea, segmentL))
+            {
+                line(segmentL, color);
+            }
+
+            if (rect::clip_line(g_gfx.clipArea, segmentR))
+            {
+                line(segmentR, color);
+            }
         }
 
         void rectangle_fill(Rect<int> r, int color)

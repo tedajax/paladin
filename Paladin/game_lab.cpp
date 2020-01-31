@@ -9,18 +9,23 @@ using tdjx::math::Rect;
 
 perlin_gen gen(0);
 int width, height, paletteSize;
+float32 aspectRatio;
 tdjx::gfx::Canvas mandelbrot_canvas;
 
 std::optional<Rect<int>> g_select;
 
 LabGame::LabGame(SDL_Window* window)
 {
-    tdjx::gfx::init_with_window(1280, 640, window);
-    //tdjx::gfx::load_palette("assets/palettes/vga13h.png");
-    //tdjx::gfx::load_palette("assets/palettes/palette_64_00.png");
+    gen = perlin_gen(SDL_GetTicks());
+
+    tdjx::gfx::init_with_window(320, 160, window);
+    //tdjx::gfx::load_palette("assets/palettes/win16_16.png");
+    tdjx::gfx::load_palette("assets/palettes/palette_64_00.png");
+    //tdjx::gfx::load_palette("assets/palettes/arne32.png");
 
     tdjx::gfx::query_screen_dimensions(width, height);
     tdjx::gfx::query_palette_size(paletteSize);
+    aspectRatio = static_cast<float32>(width) / height;
 
     mandelbrot_canvas = tdjx::gfx::canvas::create_blank_from_screen();
 
@@ -37,7 +42,7 @@ void LabGame::update()
     
 }
 
-void render_perlin(const tdjx::GameTime& time);
+void render_perlin(const tdjx::GameTime& time, float32 scale, float32 colorScale, int baseColor);
 bool try_mandelbrot_iterations(float32 real, float32 imaginary, int max, int& iterations);
 
 void render_mandelbrot(const Rect<float32>& view);
@@ -47,51 +52,9 @@ Rect<float32> g_view = { -2, -2, 2, 2 };
 
 void LabGame::render()
 {
-    int width, height;
-    tdjx::gfx::query_screen_dimensions(width, height);
-    int paletteSize;
-    tdjx::gfx::query_palette_size(paletteSize);
-
     tdjx::gfx::clear(0);
-    render_perlin(time);
-    //if (g_view != g_lastView)
-    //{
-    //    tdjx::gfx::set_canvas(mandelbrot_canvas);
-    //    tdjx::gfx::clear(0);
-    //    render_mandelbrot(g_view);
-    //    g_lastView = g_view;
-    //    tdjx::gfx::set_canvas();
-    //}
-    //tdjx::gfx::draw_canvas_to_screen(mandelbrot_canvas);
-
-    //if (g_select.has_value())
-    //{
-    //    Rect<int> selection = *g_select;
-    //    tdjx::math::rect::constrain_to_aspect_ratio(selection, 2.0f);
-    //    tdjx::gfx::rectangle(selection, 8);
-    //}
-
-    //return;
-    //const Rect<int> a = {
-    //    width / 2 - 20, height / 2 - 10,
-    //    width / 2 + 20 , height / 2 + 10
-    //};
-
-    //const Rect<int> b = {
-    //    5, 5, width - 5, height - 5
-    //};
-
-    //const int k = 0;
-    //for (int i = 0; i < k; ++i)
-    //{
-    //    Rect<int> r = tdjx::math::rect::lerp(a, b, (tdjx::math::sin((time.elapsed + static_cast<float32>(i) / k) * 90.0f) + 1.0f) / 2.0f);
-    //    int color = 27 + i % 4;
-    //    tdjx::gfx::rectangle(r, color);
-    //    for (int i = 1; i < 0; ++i)
-    //    {
-    //        tdjx::gfx::rectangle(r.x0 + i, r.y0 + i, r.x1 - i, r.y1 - i, color);
-    //    }
-    //}
+    context.scale = (tdjx::math::sin(time.elapsed * 5.0f) + 1) * 16.0f + 1.0f;
+    render_perlin(time, context.scale, context.colorScalar, context.baseColor);
 }
 
 void LabGame::on_mouse_down(int x, int y, int button)
@@ -99,7 +62,7 @@ void LabGame::on_mouse_down(int x, int y, int button)
     if (button == SDL_BUTTON_LEFT)
     {
         g_select = tdjx::math::Rect<int>{
-            x / 2, y / 2, x / 2, y / 2
+            x, y, x, y
         };
     }
 }
@@ -110,8 +73,11 @@ void LabGame::on_mouse_up(int x, int y, int button)
     {
         if (g_select.has_value())
         {
+            g_select->x1 = x;
+            g_select->y1 = y;
+
             Rect<int> selection = *g_select;
-            tdjx::math::rect::constrain_to_aspect_ratio(selection, 2.0f);
+            //tdjx::math::rect::constrain_to_aspect_ratio(selection, 2.0f);
 
             // convert selection box screen coordinates to normalized [-1..1] space
             float32 hw = width / 2.0f, hh = height / 2.0f;
@@ -125,11 +91,6 @@ void LabGame::on_mouse_up(int x, int y, int button)
 
             printf("%0.2f %0.2f %0.2f %0.2f\n", normRect.x0, normRect.y0, normRect.x1, normRect.y1);
 
-            g_view.x0 *= normRect.x0;
-            g_view.y0 *= normRect.y0;
-            g_view.x1 *= normRect.x1;
-            g_view.y1 *= normRect.y1;
-
             g_select.reset();
         }
     }
@@ -139,12 +100,12 @@ void LabGame::on_mouse_move(int x, int y, int dx, int dy)
 {
     if (g_select.has_value())
     {
-        g_select->x1 = x / 2;
-        g_select->y1 = y / 2;
+        g_select->x1 = x;
+        g_select->y1 = y;
     }
 }
 
-void render_perlin(const tdjx::GameTime& time)
+void render_perlin(const tdjx::GameTime& time, float32 scale, float32 colorScale, int baseColor)
 {
     float32 ar = static_cast<float32>(width) / height;
 
@@ -152,16 +113,15 @@ void render_perlin(const tdjx::GameTime& time)
     {
         for (int x = 0; x < width; ++x)
         {
-            float32 nx = static_cast<float32>(x) / width * 4 * ar;
-            float32 ny = static_cast<float32>(y) / height * 4;
+            float32 nx = static_cast<float32>(x) / width * scale * ar - scale;
+            float32 ny = static_cast<float32>(y) / height * scale - scale / 2 ;
 
-            float32 z = std::sin(time.elapsed) + std::cos(time.elapsed * 1.27f) + time.elapsed / 8.f;
-            z = time.elapsed / 4.0f;
+            float32 z = time.elapsed / 8.0f;
             float32 v = gen.noise(nx, ny, z);
 
-            int iv = static_cast<int>(v * paletteSize / 1.5f);
+            int iv = static_cast<int>(v * colorScale);
 
-            tdjx::gfx::point(x, y, iv);
+            tdjx::gfx::point(x, y, iv + baseColor);
         }
     }
 }
@@ -211,7 +171,7 @@ void render_mandelbrot(const Rect<float32>& view)
             int iterations;
             if (try_mandelbrot_iterations(mx, my, 200, iterations))
             {
-                tdjx::gfx::point(x, y, iterations % 12 + 4);
+                tdjx::gfx::point(x, y, iterations % 12 + 24);
             }
         }
     }

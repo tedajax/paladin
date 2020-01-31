@@ -354,6 +354,9 @@ namespace tdjx
 
             template <typename t_type>
             bool clip_line(const Rect<t_type>& r, t_type& x0, t_type& y0, t_type& x1, t_type& y1);
+
+            template <typename t_type>
+            bool clip_line(const Rect<t_type>& r, Rect<t_type>& segment);
         }
 
         namespace rect
@@ -535,6 +538,12 @@ namespace tdjx
                     y1 = b.y;
                     return true;
                 }
+            }
+
+            template <typename t_type>
+            bool clip_line(const Rect<t_type>& r, Rect<t_type>& segment)
+            {
+                return clip_line(r, segment.x0, segment.y0, segment.x1, segment.y1);
             }
         }
     }

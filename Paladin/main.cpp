@@ -47,12 +47,12 @@ int main(int argc, char* argv[])
 
     //const int kWindowWidth = 1440;
     //const int kWindowHeight = 1080;
-    const int kWindowWidth = 1280;
-    const int kWindowHeight = 640;
+    const int kWindowWidth = 640;
+    const int kWindowHeight = 320;
     
     uint32 windowFlags = SDL_WINDOW_OPENGL;
-    //windowFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
-    //windowFlags |= SDL_WINDOW_ALLOW_HIGHDPI;
+    windowFlags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
+    windowFlags |= SDL_WINDOW_ALLOW_HIGHDPI;
 
     SDL_Window* window = SDL_CreateWindow(
         "Paladin",
@@ -83,7 +83,7 @@ int main(int argc, char* argv[])
 
     bool isRunning = true;
     bool shouldReloadShaders = false;
-    bool showImgui = true;
+    bool showImgui = false;
 
     auto app_quit = [&isRunning]() { isRunning = false; };
     auto app_reload_shaders = [&shouldReloadShaders]() { shouldReloadShaders = true; };
@@ -253,6 +253,11 @@ int main(int argc, char* argv[])
                 int screenX = static_cast<int>(sx * gfxWidth);
                 int screenY = static_cast<int>(sy * gfxHeight);
                 ImGui::Text("Mouse Pos: %d, %d", screenX, screenY);
+
+                LabGame* lab = game->get_game_as<LabGame>();
+                ImGui::InputFloat("Scale", &lab->context.scale);
+                ImGui::InputInt("Base Color", &lab->context.baseColor);
+                ImGui::InputFloat("Color Scale", &lab->context.colorScalar);
 
                 //tdjx::gfx::point(screenX, screenY, 8);
             }

@@ -11,6 +11,9 @@ struct SDL_Window;
 
 struct LabContext
 {
+    int baseColor = 0;
+    float32 colorScalar = 32.0f;
+    float32 scale = 8.0f;
 };
 
 struct LabGame : public tdjx::Game<LabContext>

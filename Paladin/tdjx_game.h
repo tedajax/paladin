@@ -26,6 +26,9 @@ namespace tdjx
         virtual void on_mouse_up(int x, int y, int button) {}
         virtual void on_mouse_move(int x, int y, int dx, int dy) {}
 
+        template <typename T>
+        T* get_game_as() { return dynamic_cast<T*>(this); }
+
         GameTime time;
     };
 

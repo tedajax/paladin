@@ -18,7 +18,7 @@ void main()
 	}
 	else if (mode == 1)
 	{
-		color = texture(intensity, uv).rrr;
+		color = texture(intensity, uv).rrr * scalar;
 	}
 	else if (mode == 2)
 	{
